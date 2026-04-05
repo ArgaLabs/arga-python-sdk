@@ -29,6 +29,9 @@ dependencies = [
     "pydantic>=2.0.0",
 ]
 
+[project.optional-dependencies]
+dev = ["pytest", "pytest-asyncio", "respx"]
+
 [project.urls]
 Documentation = "https://docs.argalabs.com"
 Repository = "https://github.com/ArgaLabs/arga-python-sdk"
