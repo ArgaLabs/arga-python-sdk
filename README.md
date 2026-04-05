@@ -5,13 +5,13 @@ Typed Python client for the [Arga](https://argalabs.com) API. Supports both sync
 ## Installation
 
 ```bash
-pip install arga
+pip install arga-sdk
 ```
 
 ## Quick Start
 
 ```python
-from arga import Arga
+from arga_sdk import Arga
 
 client = Arga(api_key="arga_...")
 
@@ -38,7 +38,7 @@ client.runs.cancel(run.run_id)
 
 ```python
 import asyncio
-from arga import AsyncArga
+from arga_sdk import AsyncArga
 
 async def main():
     client = AsyncArga(api_key="arga_...")
@@ -104,7 +104,7 @@ async with AsyncArga(api_key="arga_...") as client:
 ## Error Handling
 
 ```python
-from arga import Arga, ArgaAPIError, ArgaError
+from arga_sdk import Arga, ArgaAPIError, ArgaError
 
 client = Arga(api_key="arga_...")
 

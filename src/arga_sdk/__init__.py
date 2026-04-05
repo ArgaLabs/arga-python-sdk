@@ -1,8 +1,8 @@
 """Arga Python SDK — typed client for the Arga API."""
 
-from arga.client import Arga, AsyncArga
-from arga.exceptions import ArgaAPIError, ArgaError
-from arga.types import (
+from arga_sdk.client import Arga, AsyncArga
+from arga_sdk.exceptions import ArgaAPIError, ArgaError
+from arga_sdk.types import (
     Run,
     RunDetail,
     Scenario,

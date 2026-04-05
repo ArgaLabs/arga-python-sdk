@@ -5,7 +5,7 @@ from typing import Any, Iterator, AsyncIterator
 import httpx
 import httpx_sse
 
-from arga.exceptions import ArgaAPIError
+from arga_sdk.exceptions import ArgaAPIError
 
 
 def _raise_for_status(response: httpx.Response) -> None:

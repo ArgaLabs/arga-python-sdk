@@ -6,7 +6,7 @@ import httpx
 import pytest
 import respx
 
-from arga import Arga, AsyncArga, Scenario
+from arga_sdk import Arga, AsyncArga, Scenario
 
 from .conftest import (
     SCENARIO_RESPONSE,

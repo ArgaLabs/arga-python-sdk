@@ -6,7 +6,7 @@ import httpx
 import pytest
 import respx
 
-from arga import Arga, AsyncArga, Twin, TwinInstance, TwinProvisionStatus
+from arga_sdk import Arga, AsyncArga, Twin, TwinInstance, TwinProvisionStatus
 
 from .conftest import (
     TEST_API_KEY,

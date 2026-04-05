@@ -4,9 +4,9 @@ import asyncio
 import time
 from typing import Any, Iterator, AsyncIterator
 
-from arga._http import AsyncHTTPClient, SyncHTTPClient
-from arga.exceptions import ArgaError
-from arga.types import (
+from arga_sdk._http import AsyncHTTPClient, SyncHTTPClient
+from arga_sdk.exceptions import ArgaError
+from arga_sdk.types import (
     Run,
     RunDetail,
     Scenario,

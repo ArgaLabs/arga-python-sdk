@@ -4,8 +4,8 @@ import httpx
 import pytest
 import respx
 
-from arga import Arga, AsyncArga
-from arga.exceptions import ArgaAPIError
+from arga_sdk import Arga, AsyncArga
+from arga_sdk.exceptions import ArgaAPIError
 
 from .conftest import TEST_BASE_URL
 

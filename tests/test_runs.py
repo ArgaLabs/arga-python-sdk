@@ -4,8 +4,8 @@ import httpx
 import pytest
 import respx
 
-from arga import Arga, AsyncArga, Run, RunDetail
-from arga.exceptions import ArgaError
+from arga_sdk import Arga, AsyncArga, Run, RunDetail
+from arga_sdk.exceptions import ArgaError
 
 from .conftest import (
     RUN_DETAIL_COMPLETED,

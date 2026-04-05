@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 import respx
 
-from arga import Arga, AsyncArga
+from arga_sdk import Arga, AsyncArga
 
 TEST_BASE_URL = "https://test.argalabs.com"
 TEST_API_KEY = "arga_test_key_1234567890"
