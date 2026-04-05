@@ -4,8 +4,16 @@ Typed Python client for the [Arga](https://argalabs.com) API. Supports both sync
 
 ## Installation
 
+Install with `uv`:
+
 ```bash
-pip install arga-sdk
+uv add arga-py-sdk
+```
+
+Or, if you're using `pip`:
+
+```bash
+pip install arga-py-sdk
 ```
 
 ## Quick Start
