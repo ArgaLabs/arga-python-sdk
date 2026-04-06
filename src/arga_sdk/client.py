@@ -38,6 +38,10 @@ class _SyncRuns:
         credentials: dict[str, Any] | None = None,
         runner_mode: str | None = None,
         session_id: str | None = None,
+        repo: str | None = None,
+        branch: str | None = None,
+        pr_url: str | None = None,
+        provision_id: str | None = None,
     ) -> Run:
         body: dict[str, Any] = {"url": url}
         if prompt is not None:
@@ -50,6 +54,14 @@ class _SyncRuns:
             body["runner_mode"] = runner_mode
         if session_id is not None:
             body["session_id"] = session_id
+        if repo is not None:
+            body["repo"] = repo
+        if branch is not None:
+            body["branch"] = branch
+        if pr_url is not None:
+            body["pr_url"] = pr_url
+        if provision_id is not None:
+            body["provision_id"] = provision_id
         data = self._http.post("/validate/url-run", json=body)
         return Run.model_validate(data)
 
@@ -175,6 +187,9 @@ class _SyncTwins:
             f"/validate/twins/provision/{run_id}/extend", json=body
         )
 
+    def teardown(self, run_id: str) -> dict[str, Any]:
+        return self._http.post(f"/validate/twins/provision/{run_id}/teardown")  # type: ignore[return-value]
+
 
 class _SyncScenarios:
     """Synchronous methods for scenario endpoints."""
@@ -245,6 +260,10 @@ class _AsyncRuns:
         credentials: dict[str, Any] | None = None,
         runner_mode: str | None = None,
         session_id: str | None = None,
+        repo: str | None = None,
+        branch: str | None = None,
+        pr_url: str | None = None,
+        provision_id: str | None = None,
     ) -> Run:
         body: dict[str, Any] = {"url": url}
         if prompt is not None:
@@ -257,6 +276,14 @@ class _AsyncRuns:
             body["runner_mode"] = runner_mode
         if session_id is not None:
             body["session_id"] = session_id
+        if repo is not None:
+            body["repo"] = repo
+        if branch is not None:
+            body["branch"] = branch
+        if pr_url is not None:
+            body["pr_url"] = pr_url
+        if provision_id is not None:
+            body["provision_id"] = provision_id
         data = await self._http.post("/validate/url-run", json=body)
         return Run.model_validate(data)
 
@@ -382,6 +409,9 @@ class _AsyncTwins:
         return await self._http.post(  # type: ignore[return-value]
             f"/validate/twins/provision/{run_id}/extend", json=body
         )
+
+    async def teardown(self, run_id: str) -> dict[str, Any]:
+        return await self._http.post(f"/validate/twins/provision/{run_id}/teardown")  # type: ignore[return-value]
 
 
 class _AsyncScenarios:
