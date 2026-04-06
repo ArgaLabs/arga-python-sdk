@@ -78,6 +78,43 @@ async with AsyncArga(api_key="arga_...") as client:
     run = await client.runs.create_url_run(url="https://staging.myapp.com")
 ```
 
+## Examples
+
+Runnable examples live in [`examples/`](examples/README.md). They are the best
+way to see realistic customer workflows end to end.
+
+Before running any example, set your API key:
+
+```bash
+export ARGA_API_KEY=arga_your_api_key
+```
+
+If you need a non-default API environment, you can also set:
+
+```bash
+export ARGA_BASE_URL=https://app.argalabs.com
+```
+
+Start with the staging validation example:
+
+```bash
+uv run python examples/validate_staging_release.py
+```
+
+Each example is a small workflow script with an editable config block near the
+top of the file. Open the file, adjust the business-specific values, then run
+it with `uv`.
+
+Choose an example based on the customer job you want to model:
+
+- [`examples/validate_staging_release.py`](examples/validate_staging_release.py): validate staging before a release
+- [`examples/create_checkout_scenario.py`](examples/create_checkout_scenario.py): create a reusable checkout scenario
+- [`examples/provision_checkout_twins.py`](examples/provision_checkout_twins.py): provision disposable integrations like Stripe
+- [`examples/explore_staging_with_agent.py`](examples/explore_staging_with_agent.py): let Arga explore staging autonomously
+
+See [`examples/README.md`](examples/README.md) for exact commands, required
+edits, and expected output for each example.
+
 ## Available Methods
 
 ### Runs
