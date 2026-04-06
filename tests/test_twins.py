@@ -9,7 +9,6 @@ import respx
 from arga_sdk import Arga, AsyncArga, Twin, TwinInstance, TwinProvisionStatus
 
 from .conftest import (
-    TEST_API_KEY,
     TEST_BASE_URL,
     TWIN_PLAID,
     TWIN_PROVISION_STATUS,
@@ -73,9 +72,7 @@ class TestProvision:
                 200, json={"run_id": "run_abc123", "status": "provisioning"}
             )
         )
-        client.twins.provision(
-            ["stripe"], ttl_minutes=30, scenario_id="scn_abc123"
-        )
+        client.twins.provision(["stripe"], ttl_minutes=30, scenario_id="scn_abc123")
 
         body = json.loads(route.calls[0].request.content)
         assert body["twins"] == ["stripe"]
@@ -120,7 +117,10 @@ class TestGetStatus:
         assert stripe_inst.name == "stripe"
         assert stripe_inst.label == "Stripe Payments"
         assert stripe_inst.base_url == "https://twins.argalabs.com/stripe/run_abc123"
-        assert stripe_inst.admin_url == "https://twins.argalabs.com/stripe/run_abc123/admin"
+        assert (
+            stripe_inst.admin_url
+            == "https://twins.argalabs.com/stripe/run_abc123/admin"
+        )
         assert stripe_inst.env_vars == {"STRIPE_API_KEY": "sk_test_twin_1234"}
         assert stripe_inst.show_in_ui is True
 
@@ -149,9 +149,7 @@ class TestExtend:
         body = json.loads(route.calls[0].request.content)
         assert body["ttl_minutes"] == 60
 
-    def test_extend_default_ttl(
-        self, client: Arga, mock_router: respx.Router
-    ) -> None:
+    def test_extend_default_ttl(self, client: Arga, mock_router: respx.Router) -> None:
         route = mock_router.post("/validate/twins/provision/run_abc123/extend").mock(
             return_value=httpx.Response(
                 200, json={"status": "extended", "expires_at": "2026-03-15T12:30:00Z"}
@@ -161,6 +159,20 @@ class TestExtend:
 
         body = json.loads(route.calls[0].request.content)
         assert body["ttl_minutes"] == 60  # default
+
+
+class TestTeardown:
+    def test_teardown(self, client: Arga, mock_router: respx.Router) -> None:
+        route = mock_router.post("/validate/twins/provision/run_abc123/teardown").mock(
+            return_value=httpx.Response(
+                200, json={"status": "teardown_initiated", "run_id": "run_abc123"}
+            )
+        )
+        result = client.twins.teardown("run_abc123")
+
+        assert result["status"] == "teardown_initiated"
+        assert result["run_id"] == "run_abc123"
+        assert route.call_count == 1
 
 
 # --------------------------------------------------------------------------
@@ -195,5 +207,20 @@ async def test_async_get_status(async_client: AsyncArga) -> None:
         assert status.status == "ready"
         assert status.twins is not None
         assert "stripe" in status.twins
+
+    await async_client.close()
+
+
+@pytest.mark.asyncio
+async def test_async_teardown(async_client: AsyncArga) -> None:
+    with respx.mock(base_url=TEST_BASE_URL) as router:
+        router.post("/validate/twins/provision/run_abc123/teardown").mock(
+            return_value=httpx.Response(
+                200, json={"status": "teardown_initiated", "run_id": "run_abc123"}
+            )
+        )
+        result = await async_client.twins.teardown("run_abc123")
+
+        assert result["status"] == "teardown_initiated"
 
     await async_client.close()

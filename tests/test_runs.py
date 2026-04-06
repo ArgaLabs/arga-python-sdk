@@ -61,6 +61,63 @@ class TestCreateUrlRun:
         assert body["session_id"] == "sess_custom"
 
 
+class TestCreateUrlRunDiffAware:
+    def test_with_repo_and_branch(
+        self, client: Arga, mock_router: respx.Router
+    ) -> None:
+        route = mock_router.post("/validate/url-run").mock(
+            return_value=httpx.Response(200, json=RUN_RESPONSE)
+        )
+        client.runs.create_url_run(
+            "https://staging.example.com",
+            repo="owner/repo",
+            branch="feat-x",
+        )
+
+        body = _json_body(route.calls[0].request)
+        assert body["url"] == "https://staging.example.com"
+        assert body["repo"] == "owner/repo"
+        assert body["branch"] == "feat-x"
+
+    def test_with_pr_url(self, client: Arga, mock_router: respx.Router) -> None:
+        route = mock_router.post("/validate/url-run").mock(
+            return_value=httpx.Response(200, json=RUN_RESPONSE)
+        )
+        client.runs.create_url_run(
+            "https://staging.example.com",
+            pr_url="https://github.com/owner/repo/pull/42",
+        )
+
+        body = _json_body(route.calls[0].request)
+        assert body["pr_url"] == "https://github.com/owner/repo/pull/42"
+
+    def test_with_provision_id(self, client: Arga, mock_router: respx.Router) -> None:
+        route = mock_router.post("/validate/url-run").mock(
+            return_value=httpx.Response(200, json=RUN_RESPONSE)
+        )
+        client.runs.create_url_run(
+            "https://staging.example.com",
+            provision_id="run_provision_001",
+        )
+
+        body = _json_body(route.calls[0].request)
+        assert body["provision_id"] == "run_provision_001"
+
+    def test_omitted_fields_not_in_body(
+        self, client: Arga, mock_router: respx.Router
+    ) -> None:
+        route = mock_router.post("/validate/url-run").mock(
+            return_value=httpx.Response(200, json=RUN_RESPONSE)
+        )
+        client.runs.create_url_run("https://staging.example.com")
+
+        body = _json_body(route.calls[0].request)
+        assert "repo" not in body
+        assert "branch" not in body
+        assert "pr_url" not in body
+        assert "provision_id" not in body
+
+
 class TestCreatePrRun:
     def test_basic(self, client: Arga, mock_router: respx.Router) -> None:
         route = mock_router.post("/validate/pr-run").mock(
@@ -211,6 +268,27 @@ async def test_async_create_url_run(async_client: AsyncArga) -> None:
 
         body = _json_body(route.calls[0].request)
         assert body == {"url": "https://staging.example.com"}
+
+    await async_client.close()
+
+
+@pytest.mark.asyncio
+async def test_async_create_url_run_with_repo(async_client: AsyncArga) -> None:
+    with respx.mock(base_url=TEST_BASE_URL) as router:
+        route = router.post("/validate/url-run").mock(
+            return_value=httpx.Response(200, json=RUN_RESPONSE)
+        )
+        await async_client.runs.create_url_run(
+            "https://staging.example.com",
+            repo="owner/repo",
+            branch="feat-x",
+            provision_id="run_provision_001",
+        )
+
+        body = _json_body(route.calls[0].request)
+        assert body["repo"] == "owner/repo"
+        assert body["branch"] == "feat-x"
+        assert body["provision_id"] == "run_provision_001"
 
     await async_client.close()
 
