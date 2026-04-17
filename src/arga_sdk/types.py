@@ -74,7 +74,15 @@ class TwinProvisionStatus(BaseModel):
     twins: dict[str, TwinInstance] | None = None
     dashboard_url: str | None = None
     expires_at: datetime | None = None
+    # Proxy token for hitting each twin's ``admin_url`` (and, for private
+    # runs, its ``base_url``). Always returned once a run is ready; for
+    # public runs the ``base_url`` is directly callable without it, but
+    # admin-side ops still need it.
     proxy_token: str | None = None
+    # True when the run's ``base_url``s are the drop-in ``pub-r<id>...``
+    # hosts. Lets callers distinguish "drop-in ready" from "needs proxy_token
+    # wired through the HTTP client".
+    is_public: bool | None = None
     error: str | None = None
 
 

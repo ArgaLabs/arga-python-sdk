@@ -13,6 +13,7 @@ from .conftest import (
     TEST_BASE_URL,
     TWIN_PLAID,
     TWIN_PROVISION_STATUS,
+    TWIN_PUBLIC_PROVISION_STATUS,
     TWIN_STRIPE,
 )
 
@@ -94,6 +95,38 @@ class TestProvision:
 
         body = json.loads(route.calls[0].request.content)
         assert body["ttl_minutes"] == 60  # default
+        # Don't send `public` unless the caller explicitly asks — keeps the
+        # server-side default authoritative, so we don't force SDK releases
+        # whenever that policy shifts.
+        assert "public" not in body
+
+    def test_provision_with_public_false(
+        self, client: Arga, mock_router: respx.Router
+    ) -> None:
+        """Callers can force a private, proxy-auth-gated environment."""
+        route = mock_router.post("/validate/twins/provision").mock(
+            return_value=httpx.Response(
+                200, json={"run_id": "run_abc123", "status": "provisioning"}
+            )
+        )
+        client.twins.provision(["stripe"], public=False)
+
+        body = json.loads(route.calls[0].request.content)
+        assert body["public"] is False
+
+    def test_provision_with_public_true(
+        self, client: Arga, mock_router: respx.Router
+    ) -> None:
+        """Callers can explicitly opt in to the drop-in ``pub-`` experience."""
+        route = mock_router.post("/validate/twins/provision").mock(
+            return_value=httpx.Response(
+                200, json={"run_id": "run_abc123", "status": "provisioning"}
+            )
+        )
+        client.twins.provision(["stripe"], public=True)
+
+        body = json.loads(route.calls[0].request.content)
+        assert body["public"] is True
 
 
 class TestGetStatus:
@@ -128,6 +161,32 @@ class TestGetStatus:
         assert isinstance(plaid_inst, TwinInstance)
         assert plaid_inst.name == "plaid"
         assert plaid_inst.admin_url is None
+
+        assert status.is_public is False
+
+    def test_get_status_public_run(
+        self, client: Arga, mock_router: respx.Router
+    ) -> None:
+        """Public runs surface ``is_public=True`` so callers know ``base_url``
+        is directly usable from a native SDK. ``proxy_token`` is still
+        returned for admin-side operations (CLI reset, dashboard cookies)
+        that hit the private ``admin_url``."""
+        mock_router.get("/validate/twins/provision/run_pub123/status").mock(
+            return_value=httpx.Response(200, json=TWIN_PUBLIC_PROVISION_STATUS)
+        )
+        status = client.twins.get_status("run_pub123")
+
+        assert status.is_public is True
+        assert status.proxy_token == "proxy_tok_pub"
+        assert status.twins is not None
+        slack_inst = status.twins["slack"]
+        assert slack_inst.base_url is not None
+        assert slack_inst.base_url.startswith("https://pub-r")
+        # The admin_url keeps the private host so the dashboard's cookie/JWT
+        # path still works and doesn't inherit public access.
+        assert slack_inst.admin_url is not None
+        assert slack_inst.admin_url.startswith("https://r")
+        assert not slack_inst.admin_url.startswith("https://pub-r")
 
 
 class TestExtend:

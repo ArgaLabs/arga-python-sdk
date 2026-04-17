@@ -171,10 +171,26 @@ class _SyncTwins:
         *,
         ttl_minutes: int = 60,
         scenario_id: str | None = None,
+        public: bool | None = None,
     ) -> dict[str, str]:
+        """Provision a set of twins.
+
+        Args:
+            twins: Twin names to provision (e.g. ``["slack", "stripe"]``).
+            ttl_minutes: How long to keep the environment alive.
+            scenario_id: Optional scenario to seed twin state from.
+            public: Whether the returned ``base_url`` for each twin should be
+                a public ``pub-r<id>--<surface>`` host that's directly
+                callable without proxy auth (so you can drop it straight
+                into a Slack/Stripe/Discord SDK). When ``None`` (default),
+                the server picks its own default (currently ``True``). Pass
+                ``False`` to force a private, proxy-auth-gated environment.
+        """
         body: dict[str, Any] = {"twins": twins, "ttl_minutes": ttl_minutes}
         if scenario_id is not None:
             body["scenario_id"] = scenario_id
+        if public is not None:
+            body["public"] = public
         return self._http.post("/validate/twins/provision", json=body)  # type: ignore[return-value]
 
     def get_status(self, run_id: str) -> TwinProvisionStatus:
@@ -394,10 +410,26 @@ class _AsyncTwins:
         *,
         ttl_minutes: int = 60,
         scenario_id: str | None = None,
+        public: bool | None = None,
     ) -> dict[str, str]:
+        """Provision a set of twins.
+
+        Args:
+            twins: Twin names to provision (e.g. ``["slack", "stripe"]``).
+            ttl_minutes: How long to keep the environment alive.
+            scenario_id: Optional scenario to seed twin state from.
+            public: Whether the returned ``base_url`` for each twin should be
+                a public ``pub-r<id>--<surface>`` host that's directly
+                callable without proxy auth (so you can drop it straight
+                into a Slack/Stripe/Discord SDK). When ``None`` (default),
+                the server picks its own default (currently ``True``). Pass
+                ``False`` to force a private, proxy-auth-gated environment.
+        """
         body: dict[str, Any] = {"twins": twins, "ttl_minutes": ttl_minutes}
         if scenario_id is not None:
             body["scenario_id"] = scenario_id
+        if public is not None:
+            body["public"] = public
         return await self._http.post("/validate/twins/provision", json=body)  # type: ignore[return-value]
 
     async def get_status(self, run_id: str) -> TwinProvisionStatus:

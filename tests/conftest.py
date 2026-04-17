@@ -107,6 +107,27 @@ TWIN_PROVISION_STATUS = {
     "dashboard_url": "https://app.argalabs.com/runs/run_abc123",
     "expires_at": "2026-03-15T11:30:00Z",
     "proxy_token": "proxy_tok_abc",
+    "is_public": False,
+    "error": None,
+}
+
+TWIN_PUBLIC_PROVISION_STATUS = {
+    "run_id": "run_pub123",
+    "status": "ready",
+    "twins": {
+        "slack": {
+            "name": "slack",
+            "label": "Slack",
+            "base_url": "https://pub-r0123456789abcdef0123456789abcdef--slack.sandbox.argalabs.com",
+            "admin_url": "https://r0123456789abcdef0123456789abcdef--slack.sandbox.argalabs.com",
+            "env_vars": {"SLACK_BOT_TOKEN": "xoxb-twin-test"},
+            "show_in_ui": True,
+        },
+    },
+    "dashboard_url": "https://app.argalabs.com/runs/run_pub123",
+    "expires_at": "2026-03-15T11:30:00Z",
+    "proxy_token": "proxy_tok_pub",
+    "is_public": True,
     "error": None,
 }
 
