@@ -86,6 +86,27 @@ class TwinProvisionStatus(BaseModel):
     error: str | None = None
 
 
+class ScenarioTwinEnvironment(BaseModel):
+    """Long-lived twin environment pinned to a scenario."""
+
+    model_config = ConfigDict(extra="allow")
+
+    id: str
+    scenario_id: str
+    status: str
+    requested_twins: list[str]
+    twins: dict[str, TwinInstance] | None = None
+    run_id: str | None = None
+    dashboard_url: str | None = None
+    proxy_token: str | None = None
+    public: bool = True
+    error: str | None = None
+    seed_results: dict[str, Any] | None = None
+    last_seeded_at: datetime | None = None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+
 class Scenario(BaseModel):
     """A test scenario."""
 

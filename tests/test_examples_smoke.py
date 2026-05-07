@@ -9,6 +9,7 @@ EXAMPLES_DIR = Path(__file__).resolve().parent.parent / "examples"
 MODULE_NAMES = [
     "validate_staging_release",
     "create_checkout_scenario",
+    "ensure_scenario_twin_urls",
     "provision_checkout_twins",
     "explore_staging_with_agent",
 ]

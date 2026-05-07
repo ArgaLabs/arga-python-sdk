@@ -93,6 +93,23 @@ What it does:
 - waits until those twins are ready
 - prints dashboard URLs, endpoints, and env vars in a copyable shape
 
+### How do I keep stable twin URLs for a scenario?
+
+Use [`ensure_scenario_twin_urls.py`](ensure_scenario_twin_urls.py).
+
+Before running it, set `ARGA_SCENARIO_ID` to the saved scenario that should own
+the long-lived twin environment.
+
+```bash
+ARGA_SCENARIO_ID=scn_... uv run python examples/ensure_scenario_twin_urls.py
+```
+
+What it does:
+
+- creates or returns the scenario's always-on twin environment
+- prints each permanent twin `base_url`
+- leaves disposable `client.twins.provision()` workflows unchanged
+
 ### How do I let Arga explore staging autonomously?
 
 Use [`explore_staging_with_agent.py`](explore_staging_with_agent.py).

@@ -142,3 +142,29 @@ SCENARIO_RESPONSE = {
     "created_at": "2026-03-01T09:00:00Z",
     "updated_at": "2026-03-10T14:00:00Z",
 }
+
+SCENARIO_TWIN_ENVIRONMENT_RESPONSE = {
+    "id": "env_abc123",
+    "scenario_id": "scn_abc123",
+    "status": "ready",
+    "requested_twins": ["stripe"],
+    "twins": {
+        "stripe": {
+            "name": "stripe",
+            "label": "Stripe",
+            "base_url": "https://scn-0123456789abcdef0123456789abcdef--stripe.sandbox.argalabs.com",
+            "admin_url": "https://r0123456789abcdef0123456789abcdef--stripe.sandbox.argalabs.com",
+            "env_vars": {"STRIPE_API_KEY": "sk_test_twin"},
+            "show_in_ui": True,
+        }
+    },
+    "run_id": "run_abc123",
+    "dashboard_url": "https://app.argalabs.com/runs/run_abc123",
+    "proxy_token": "proxy_tok_abc",
+    "public": True,
+    "error": None,
+    "seed_results": {"stripe": {"env_vars": {"STRIPE_API_KEY": "sk_test_twin"}}},
+    "last_seeded_at": "2026-03-15T10:35:00Z",
+    "created_at": "2026-03-15T10:30:00Z",
+    "updated_at": "2026-03-15T10:35:00Z",
+}

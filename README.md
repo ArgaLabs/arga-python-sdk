@@ -109,6 +109,7 @@ Choose an example based on the customer job you want to model:
 
 - [`examples/validate_staging_release.py`](examples/validate_staging_release.py): validate staging before a release
 - [`examples/create_checkout_scenario.py`](examples/create_checkout_scenario.py): create a reusable checkout scenario
+- [`examples/ensure_scenario_twin_urls.py`](examples/ensure_scenario_twin_urls.py): ensure stable scenario twin URLs
 - [`examples/provision_checkout_twins.py`](examples/provision_checkout_twins.py): provision disposable integrations like Stripe
 - [`examples/explore_staging_with_agent.py`](examples/explore_staging_with_agent.py): let Arga explore staging autonomously
 
@@ -145,6 +146,11 @@ edits, and expected output for each example.
 | `client.scenarios.create(name, ...)` | Create a test scenario |
 | `client.scenarios.list(...)` | List scenarios (with optional filters) |
 | `client.scenarios.get(scenario_id)` | Get a scenario by ID |
+| `client.scenarios.ensure_twin_environment(scenario_id, ...)` | Create or return permanent twin URLs for a scenario |
+| `client.scenarios.get_twin_environment(scenario_id)` | Get permanent twin environment status and URLs |
+| `client.scenarios.reseed_twin_environment(scenario_id)` | Reseed a permanent twin environment from the scenario |
+| `client.scenarios.delete_twin_environment(scenario_id)` | Tear down a permanent twin environment |
+| `client.scenarios.list_twin_environments()` | List permanent scenario twin environments |
 
 ## Error Handling
 

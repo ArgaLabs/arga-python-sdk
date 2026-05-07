@@ -10,6 +10,7 @@ from arga_sdk.types import (
     Run,
     RunDetail,
     Scenario,
+    ScenarioTwinEnvironment,
     Twin,
     TwinProvisionStatus,
 )
@@ -255,6 +256,35 @@ class _SyncScenarios:
         data = self._http.get(f"/scenarios/{scenario_id}")
         return Scenario.model_validate(data)
 
+    def ensure_twin_environment(
+        self,
+        scenario_id: str,
+        *,
+        twins: list[str] | None = None,
+        public: bool = True,
+    ) -> ScenarioTwinEnvironment:
+        body: dict[str, Any] = {"public": public}
+        if twins is not None:
+            body["twins"] = twins
+        data = self._http.post(f"/scenarios/{scenario_id}/twin-environment", json=body)
+        return ScenarioTwinEnvironment.model_validate(data)
+
+    def get_twin_environment(self, scenario_id: str) -> ScenarioTwinEnvironment:
+        data = self._http.get(f"/scenarios/{scenario_id}/twin-environment")
+        return ScenarioTwinEnvironment.model_validate(data)
+
+    def reseed_twin_environment(self, scenario_id: str) -> ScenarioTwinEnvironment:
+        data = self._http.post(f"/scenarios/{scenario_id}/twin-environment/reseed")
+        return ScenarioTwinEnvironment.model_validate(data)
+
+    def delete_twin_environment(self, scenario_id: str) -> ScenarioTwinEnvironment:
+        data = self._http.delete(f"/scenarios/{scenario_id}/twin-environment")
+        return ScenarioTwinEnvironment.model_validate(data)
+
+    def list_twin_environments(self) -> list[ScenarioTwinEnvironment]:
+        data = self._http.get("/scenario-twin-environments")
+        return [ScenarioTwinEnvironment.model_validate(item) for item in data]
+
 
 # ---------------------------------------------------------------------------
 # Async namespace classes
@@ -493,6 +523,35 @@ class _AsyncScenarios:
     async def get(self, scenario_id: str) -> Scenario:
         data = await self._http.get(f"/scenarios/{scenario_id}")
         return Scenario.model_validate(data)
+
+    async def ensure_twin_environment(
+        self,
+        scenario_id: str,
+        *,
+        twins: list[str] | None = None,
+        public: bool = True,
+    ) -> ScenarioTwinEnvironment:
+        body: dict[str, Any] = {"public": public}
+        if twins is not None:
+            body["twins"] = twins
+        data = await self._http.post(f"/scenarios/{scenario_id}/twin-environment", json=body)
+        return ScenarioTwinEnvironment.model_validate(data)
+
+    async def get_twin_environment(self, scenario_id: str) -> ScenarioTwinEnvironment:
+        data = await self._http.get(f"/scenarios/{scenario_id}/twin-environment")
+        return ScenarioTwinEnvironment.model_validate(data)
+
+    async def reseed_twin_environment(self, scenario_id: str) -> ScenarioTwinEnvironment:
+        data = await self._http.post(f"/scenarios/{scenario_id}/twin-environment/reseed")
+        return ScenarioTwinEnvironment.model_validate(data)
+
+    async def delete_twin_environment(self, scenario_id: str) -> ScenarioTwinEnvironment:
+        data = await self._http.delete(f"/scenarios/{scenario_id}/twin-environment")
+        return ScenarioTwinEnvironment.model_validate(data)
+
+    async def list_twin_environments(self) -> list[ScenarioTwinEnvironment]:
+        data = await self._http.get("/scenario-twin-environments")
+        return [ScenarioTwinEnvironment.model_validate(item) for item in data]
 
 
 # ---------------------------------------------------------------------------

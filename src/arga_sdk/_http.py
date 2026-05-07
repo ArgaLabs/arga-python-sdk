@@ -47,6 +47,11 @@ class SyncHTTPClient:
         _raise_for_status(response)
         return response.json()
 
+    def delete(self, path: str) -> Any:
+        response = self._client.delete(path)
+        _raise_for_status(response)
+        return response.json()
+
     def stream_sse(self, path: str) -> Iterator[dict[str, Any]]:
         """Stream SSE events from a GET endpoint."""
         with httpx_sse.connect_sse(
@@ -90,6 +95,11 @@ class AsyncHTTPClient:
 
     async def post(self, path: str, json: dict[str, Any] | None = None) -> Any:
         response = await self._client.post(path, json=json)
+        _raise_for_status(response)
+        return response.json()
+
+    async def delete(self, path: str) -> Any:
+        response = await self._client.delete(path)
         _raise_for_status(response)
         return response.json()
 

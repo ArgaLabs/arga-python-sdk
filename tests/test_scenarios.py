@@ -6,10 +6,11 @@ import httpx
 import pytest
 import respx
 
-from arga_sdk import Arga, AsyncArga, Scenario
+from arga_sdk import Arga, AsyncArga, Scenario, ScenarioTwinEnvironment
 
 from .conftest import (
     SCENARIO_RESPONSE,
+    SCENARIO_TWIN_ENVIRONMENT_RESPONSE,
     TEST_BASE_URL,
 )
 
@@ -132,6 +133,62 @@ class TestGetScenario:
         assert scenario.name == "Login Flow Test"
 
 
+class TestScenarioTwinEnvironment:
+    def test_ensure_twin_environment(self, client: Arga, mock_router: respx.Router) -> None:
+        route = mock_router.post("/scenarios/scn_abc123/twin-environment").mock(
+            return_value=httpx.Response(200, json=SCENARIO_TWIN_ENVIRONMENT_RESPONSE)
+        )
+
+        env = client.scenarios.ensure_twin_environment("scn_abc123", twins=["stripe"], public=True)
+
+        assert isinstance(env, ScenarioTwinEnvironment)
+        assert env.scenario_id == "scn_abc123"
+        assert env.status == "ready"
+        assert env.twins is not None
+        assert env.twins["stripe"].base_url.startswith("https://scn-")
+        body = json.loads(route.calls[0].request.content)
+        assert body == {"public": True, "twins": ["stripe"]}
+
+    def test_get_twin_environment(self, client: Arga, mock_router: respx.Router) -> None:
+        mock_router.get("/scenarios/scn_abc123/twin-environment").mock(
+            return_value=httpx.Response(200, json=SCENARIO_TWIN_ENVIRONMENT_RESPONSE)
+        )
+
+        env = client.scenarios.get_twin_environment("scn_abc123")
+
+        assert env.run_id == "run_abc123"
+        assert env.proxy_token == "proxy_tok_abc"
+
+    def test_reseed_twin_environment(self, client: Arga, mock_router: respx.Router) -> None:
+        mock_router.post("/scenarios/scn_abc123/twin-environment/reseed").mock(
+            return_value=httpx.Response(200, json=SCENARIO_TWIN_ENVIRONMENT_RESPONSE)
+        )
+
+        env = client.scenarios.reseed_twin_environment("scn_abc123")
+
+        assert env.last_seeded_at is not None
+
+    def test_delete_twin_environment(self, client: Arga, mock_router: respx.Router) -> None:
+        deleted = {**SCENARIO_TWIN_ENVIRONMENT_RESPONSE, "status": "deleted"}
+        mock_router.delete("/scenarios/scn_abc123/twin-environment").mock(
+            return_value=httpx.Response(200, json=deleted)
+        )
+
+        env = client.scenarios.delete_twin_environment("scn_abc123")
+
+        assert env.status == "deleted"
+
+    def test_list_twin_environments(self, client: Arga, mock_router: respx.Router) -> None:
+        mock_router.get("/scenario-twin-environments").mock(
+            return_value=httpx.Response(200, json=[SCENARIO_TWIN_ENVIRONMENT_RESPONSE])
+        )
+
+        envs = client.scenarios.list_twin_environments()
+
+        assert len(envs) == 1
+        assert envs[0].scenario_id == "scn_abc123"
+
+
 # --------------------------------------------------------------------------
 # Async tests
 # --------------------------------------------------------------------------
@@ -167,5 +224,21 @@ async def test_async_list_scenarios(async_client: AsyncArga) -> None:
 
         assert len(scenarios) == 1
         assert scenarios[0].name == "Login Flow Test"
+
+    await async_client.close()
+
+
+@pytest.mark.asyncio
+async def test_async_ensure_twin_environment(async_client: AsyncArga) -> None:
+    with respx.mock(base_url=TEST_BASE_URL) as router:
+        route = router.post("/scenarios/scn_abc123/twin-environment").mock(
+            return_value=httpx.Response(200, json=SCENARIO_TWIN_ENVIRONMENT_RESPONSE)
+        )
+        env = await async_client.scenarios.ensure_twin_environment("scn_abc123", twins=["stripe"], public=False)
+
+        assert isinstance(env, ScenarioTwinEnvironment)
+        assert env.scenario_id == "scn_abc123"
+        body = json.loads(route.calls[0].request.content)
+        assert body == {"public": False, "twins": ["stripe"]}
 
     await async_client.close()
