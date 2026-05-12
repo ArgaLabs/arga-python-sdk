@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class Run(BaseModel):
@@ -49,6 +49,7 @@ class Twin(BaseModel):
     label: str | None = None
     kind: str | None = None
     show_in_ui: bool | None = None
+    mcp: dict[str, Any] | None = None
 
 
 class TwinInstance(BaseModel):
@@ -62,6 +63,20 @@ class TwinInstance(BaseModel):
     admin_url: str | None = None
     env_vars: dict[str, str] | None = None
     show_in_ui: bool | None = None
+    mcp_url: str | None = None
+    mcp: dict[str, Any] | None = None
+
+
+class TwinResetResult(BaseModel):
+    """Result of resetting quickstart twins to their captured baseline seed state."""
+
+    model_config = ConfigDict(extra="allow")
+
+    run_id: str
+    status: str
+    baseline_kind: str | None = None
+    factory_reset: dict[str, Any] = Field(default_factory=dict)
+    seed_results: dict[str, Any] = Field(default_factory=dict)
 
 
 class TwinProvisionStatus(BaseModel):

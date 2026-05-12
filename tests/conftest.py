@@ -77,10 +77,16 @@ TWIN_STRIPE = {
 }
 
 TWIN_PLAID = {
-    "name": "plaid",
-    "label": "Plaid Banking",
-    "kind": "unified",
+    "name": "slack",
+    "label": "Slack",
+    "kind": "frontend",
     "show_in_ui": True,
+    "mcp": {
+        "server_name": "slack-twin-mcp",
+        "transport": "streamable_http",
+        "path": "/mcp",
+        "auth": "Slack MCP OAuth user bearer token",
+    },
 }
 
 TWIN_PROVISION_STATUS = {
@@ -122,6 +128,14 @@ TWIN_PUBLIC_PROVISION_STATUS = {
             "admin_url": "https://r0123456789abcdef0123456789abcdef--slack.sandbox.argalabs.com",
             "env_vars": {"SLACK_BOT_TOKEN": "xoxb-twin-test"},
             "show_in_ui": True,
+            "mcp_url": "https://pub-r0123456789abcdef0123456789abcdef--slack.sandbox.argalabs.com/mcp",
+            "mcp": {
+                "server_name": "slack-twin-mcp",
+                "transport": "streamable_http",
+                "path": "/mcp",
+                "url": "https://pub-r0123456789abcdef0123456789abcdef--slack.sandbox.argalabs.com/mcp",
+                "auth": "Slack MCP OAuth user bearer token",
+            },
         },
     },
     "dashboard_url": "https://app.argalabs.com/runs/run_pub123",

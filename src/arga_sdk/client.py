@@ -13,6 +13,7 @@ from arga_sdk.types import (
     ScenarioTwinEnvironment,
     Twin,
     TwinProvisionStatus,
+    TwinResetResult,
 )
 
 _DEFAULT_BASE_URL = "https://app.argalabs.com"
@@ -197,6 +198,11 @@ class _SyncTwins:
     def get_status(self, run_id: str) -> TwinProvisionStatus:
         data = self._http.get(f"/validate/twins/provision/{run_id}/status")
         return TwinProvisionStatus.model_validate(data)
+
+    def reset(self, run_id: str) -> TwinResetResult:
+        """Reset twins to the baseline seed captured at provision time."""
+        data = self._http.post(f"/validate/twins/provision/{run_id}/reset")
+        return TwinResetResult.model_validate(data)
 
     def extend(self, run_id: str, *, ttl_minutes: int = 60) -> dict[str, Any]:
         body: dict[str, Any] = {"ttl_minutes": ttl_minutes}
@@ -465,6 +471,11 @@ class _AsyncTwins:
     async def get_status(self, run_id: str) -> TwinProvisionStatus:
         data = await self._http.get(f"/validate/twins/provision/{run_id}/status")
         return TwinProvisionStatus.model_validate(data)
+
+    async def reset(self, run_id: str) -> TwinResetResult:
+        """Reset twins to the baseline seed captured at provision time."""
+        data = await self._http.post(f"/validate/twins/provision/{run_id}/reset")
+        return TwinResetResult.model_validate(data)
 
     async def extend(self, run_id: str, *, ttl_minutes: int = 60) -> dict[str, Any]:
         body: dict[str, Any] = {"ttl_minutes": ttl_minutes}

@@ -6,7 +6,7 @@ import httpx
 import pytest
 import respx
 
-from arga_sdk import Arga, AsyncArga, Twin, TwinInstance, TwinProvisionStatus
+from arga_sdk import Arga, AsyncArga, Twin, TwinInstance, TwinProvisionStatus, TwinResetResult
 
 from .conftest import (
     TEST_API_KEY,
@@ -40,8 +40,10 @@ class TestListTwins:
         assert stripe.show_in_ui is True
 
         plaid = twins[1]
-        assert plaid.name == "plaid"
-        assert plaid.label == "Plaid Banking"
+        assert plaid.name == "slack"
+        assert plaid.label == "Slack"
+        assert plaid.mcp is not None
+        assert plaid.mcp["path"] == "/mcp"
 
     def test_list_empty(self, client: Arga, mock_router: respx.Router) -> None:
         mock_router.get("/validate/twins").mock(
@@ -187,6 +189,32 @@ class TestGetStatus:
         assert slack_inst.admin_url is not None
         assert slack_inst.admin_url.startswith("https://r")
         assert not slack_inst.admin_url.startswith("https://pub-r")
+        assert slack_inst.mcp_url is not None
+        assert slack_inst.mcp_url.endswith("/mcp")
+        assert slack_inst.mcp is not None
+        assert slack_inst.mcp["path"] == "/mcp"
+
+
+class TestReset:
+    def test_reset(self, client: Arga, mock_router: respx.Router) -> None:
+        mock_router.post("/validate/twins/provision/run_abc123/reset").mock(
+            return_value=httpx.Response(
+                200,
+                json={
+                    "run_id": "run_abc123",
+                    "status": "reset_complete",
+                    "baseline_kind": "scenario",
+                    "factory_reset": {"slack": {"status": "ok"}},
+                    "seed_results": {"slack": {"status": "seeded"}},
+                },
+            )
+        )
+        result = client.twins.reset("run_abc123")
+        assert isinstance(result, TwinResetResult)
+        assert result.run_id == "run_abc123"
+        assert result.status == "reset_complete"
+        assert result.baseline_kind == "scenario"
+        assert result.factory_reset["slack"]["status"] == "ok"
 
 
 class TestExtend:
@@ -237,7 +265,31 @@ async def test_async_list_twins(async_client: AsyncArga) -> None:
 
         assert len(twins) == 2
         assert twins[0].name == "stripe"
-        assert twins[1].name == "plaid"
+        assert twins[1].name == "slack"
+        assert twins[1].mcp is not None
+        assert twins[1].mcp["path"] == "/mcp"
+
+    await async_client.close()
+
+
+@pytest.mark.asyncio
+async def test_async_reset(async_client: AsyncArga) -> None:
+    with respx.mock(base_url=TEST_BASE_URL) as router:
+        router.post("/validate/twins/provision/run_abc123/reset").mock(
+            return_value=httpx.Response(
+                200,
+                json={
+                    "run_id": "run_abc123",
+                    "status": "reset_complete",
+                    "baseline_kind": "empty",
+                    "factory_reset": {},
+                    "seed_results": {},
+                },
+            )
+        )
+        result = await async_client.twins.reset("run_abc123")
+        assert isinstance(result, TwinResetResult)
+        assert result.status == "reset_complete"
 
     await async_client.close()
 

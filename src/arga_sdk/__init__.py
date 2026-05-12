@@ -10,6 +10,7 @@ from arga_sdk.types import (
     Twin,
     TwinInstance,
     TwinProvisionStatus,
+    TwinResetResult,
 )
 
 __all__ = [
@@ -24,4 +25,5 @@ __all__ = [
     "Twin",
     "TwinInstance",
     "TwinProvisionStatus",
+    "TwinResetResult",
 ]
