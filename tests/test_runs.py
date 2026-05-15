@@ -102,42 +102,44 @@ class TestCreatePrRun:
 
 class TestCreateAgentRun:
     def test_basic(self, client: Arga, mock_router: respx.Router) -> None:
-        route = mock_router.post("/validate/agent-run").mock(
+        route = mock_router.post("/validate/pr-run").mock(
             return_value=httpx.Response(200, json=RUN_RESPONSE)
         )
-        run = client.runs.create_agent_run(url="https://staging.example.com")
+        run = client.runs.create_agent_run("owner/repo", branch="main")
 
         assert isinstance(run, Run)
         assert run.run_id == "run_abc123"
 
         body = _json_body(route.calls[0].request)
-        assert body["url"] == "https://staging.example.com"
-        assert body["action_budget"] == 200  # default
+        assert body["repo"] == "owner/repo"
+        assert body["branch"] == "main"
+        assert body["run_type"] == "agent_run"
 
     def test_with_all_options(self, client: Arga, mock_router: respx.Router) -> None:
-        route = mock_router.post("/validate/agent-run").mock(
+        route = mock_router.post("/validate/pr-run").mock(
             return_value=httpx.Response(200, json=RUN_RESPONSE)
         )
         client.runs.create_agent_run(
-            url="https://staging.example.com",
-            repo="owner/repo",
+            "owner/repo",
             branch="main",
-            credentials=[{"type": "basic", "username": "admin", "password": "pw"}],
-            focus="security",
-            action_budget=50,
-            runner_mode="headless",
+            pr_url="https://github.com/owner/repo/pull/42",
+            context_notes="Explore the auth flow",
+            scenario_prompt="Seed login fixtures",
+            twins=["github"],
+            frontend_url="https://preview.example.com",
+            session_id="sess_agent",
         )
 
         body = _json_body(route.calls[0].request)
-        assert body["url"] == "https://staging.example.com"
         assert body["repo"] == "owner/repo"
         assert body["branch"] == "main"
-        assert body["credentials"] == [
-            {"type": "basic", "username": "admin", "password": "pw"}
-        ]
-        assert body["focus"] == "security"
-        assert body["action_budget"] == 50
-        assert body["runner_mode"] == "headless"
+        assert body["pr_url"] == "https://github.com/owner/repo/pull/42"
+        assert body["context_notes"] == "Explore the auth flow"
+        assert body["scenario_prompt"] == "Seed login fixtures"
+        assert body["twins"] == ["github"]
+        assert body["frontend_url"] == "https://preview.example.com"
+        assert body["session_id"] == "sess_agent"
+        assert body["run_type"] == "agent_run"
 
 
 class TestGetRun:
