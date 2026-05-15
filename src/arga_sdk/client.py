@@ -99,29 +99,32 @@ class _SyncRuns:
 
     def create_agent_run(
         self,
+        repo: str,
         *,
-        url: str | None = None,
-        repo: str | None = None,
         branch: str | None = None,
-        credentials: list[dict[str, Any]] | None = None,
-        focus: str | None = None,
-        action_budget: int = 200,
-        runner_mode: str | None = None,
+        pr_url: str | None = None,
+        context_notes: str | None = None,
+        scenario_prompt: str | None = None,
+        twins: list[str] | None = None,
+        frontend_url: str | None = None,
+        session_id: str | None = None,
     ) -> Run:
-        body: dict[str, Any] = {"action_budget": action_budget}
-        if url is not None:
-            body["url"] = url
-        if repo is not None:
-            body["repo"] = repo
+        body: dict[str, Any] = {"repo": repo, "run_type": "agent_run"}
         if branch is not None:
             body["branch"] = branch
-        if credentials is not None:
-            body["credentials"] = credentials
-        if focus is not None:
-            body["focus"] = focus
-        if runner_mode is not None:
-            body["runner_mode"] = runner_mode
-        data = self._http.post("/validate/agent-run", json=body)
+        if pr_url is not None:
+            body["pr_url"] = pr_url
+        if context_notes is not None:
+            body["context_notes"] = context_notes
+        if scenario_prompt is not None:
+            body["scenario_prompt"] = scenario_prompt
+        if twins is not None:
+            body["twins"] = twins
+        if frontend_url is not None:
+            body["frontend_url"] = frontend_url
+        if session_id is not None:
+            body["session_id"] = session_id
+        data = self._http.post("/validate/pr-run", json=body)
         return Run.model_validate(data)
 
     def get(self, run_id: str) -> RunDetail:
@@ -371,29 +374,32 @@ class _AsyncRuns:
 
     async def create_agent_run(
         self,
+        repo: str,
         *,
-        url: str | None = None,
-        repo: str | None = None,
         branch: str | None = None,
-        credentials: list[dict[str, Any]] | None = None,
-        focus: str | None = None,
-        action_budget: int = 200,
-        runner_mode: str | None = None,
+        pr_url: str | None = None,
+        context_notes: str | None = None,
+        scenario_prompt: str | None = None,
+        twins: list[str] | None = None,
+        frontend_url: str | None = None,
+        session_id: str | None = None,
     ) -> Run:
-        body: dict[str, Any] = {"action_budget": action_budget}
-        if url is not None:
-            body["url"] = url
-        if repo is not None:
-            body["repo"] = repo
+        body: dict[str, Any] = {"repo": repo, "run_type": "agent_run"}
         if branch is not None:
             body["branch"] = branch
-        if credentials is not None:
-            body["credentials"] = credentials
-        if focus is not None:
-            body["focus"] = focus
-        if runner_mode is not None:
-            body["runner_mode"] = runner_mode
-        data = await self._http.post("/validate/agent-run", json=body)
+        if pr_url is not None:
+            body["pr_url"] = pr_url
+        if context_notes is not None:
+            body["context_notes"] = context_notes
+        if scenario_prompt is not None:
+            body["scenario_prompt"] = scenario_prompt
+        if twins is not None:
+            body["twins"] = twins
+        if frontend_url is not None:
+            body["frontend_url"] = frontend_url
+        if session_id is not None:
+            body["session_id"] = session_id
+        data = await self._http.post("/validate/pr-run", json=body)
         return Run.model_validate(data)
 
     async def get(self, run_id: str) -> RunDetail:

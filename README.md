@@ -124,7 +124,7 @@ edits, and expected output for each example.
 |--------|-------------|
 | `client.runs.create_url_run(url, ...)` | Test a live URL with browser validation |
 | `client.runs.create_pr_run(repo, ...)` | Validate code changes from a PR or branch |
-| `client.runs.create_agent_run(...)` | Deploy an autonomous agent for exploration |
+| `client.runs.create_agent_run(repo, ...)` | Deploy an autonomous agent for PR or branch exploration |
 | `client.runs.get(run_id)` | Get full run details |
 | `client.runs.stream_results(run_id)` | Stream SSE result events |
 | `client.runs.cancel(run_id)` | Cancel a running run |
