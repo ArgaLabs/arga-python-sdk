@@ -89,6 +89,36 @@ TWIN_PLAID = {
     },
 }
 
+TWIN_SALESFORCE = {
+    "name": "salesforce",
+    "label": "Salesforce",
+    "kind": "backend",
+    "show_in_ui": True,
+}
+
+TWIN_SALESFORCE_PROVISION_STATUS = {
+    "run_id": "run_sf123",
+    "status": "ready",
+    "twins": {
+        "salesforce": {
+            "name": "salesforce",
+            "label": "Salesforce",
+            "base_url": "https://pub-r0123456789abcdef0123456789abcdef--salesforce.sandbox.argalabs.com",
+            "admin_url": "https://r0123456789abcdef0123456789abcdef--salesforce.sandbox.argalabs.com",
+            "env_vars": {
+                "SALESFORCE_ACCESS_TOKEN": "00D000000000001!salesforce-twin-token",
+                "SALESFORCE_INSTANCE_URL": "https://pub-r0123456789abcdef0123456789abcdef--salesforce.sandbox.argalabs.com",
+                "SALESFORCE_API_BASE_URL": "https://pub-r0123456789abcdef0123456789abcdef--salesforce.sandbox.argalabs.com",
+            },
+            "show_in_ui": True,
+        },
+    },
+    "dashboard_url": "https://app.argalabs.com/runs/run_sf123",
+    "proxy_token": "proxy_tok_sf",
+    "is_public": True,
+    "error": None,
+}
+
 TWIN_PROVISION_STATUS = {
     "run_id": "run_abc123",
     "status": "ready",

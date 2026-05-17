@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import json
+from typing import get_args
 
 import httpx
 import pytest
 import respx
 
-from arga_sdk import Arga, AsyncArga, Twin, TwinInstance, TwinProvisionStatus, TwinResetResult
+from arga_sdk import Arga, AsyncArga, KnownTwinName, Twin, TwinInstance, TwinProvisionStatus, TwinResetResult
 
 from .conftest import (
     TEST_API_KEY,
@@ -14,6 +15,8 @@ from .conftest import (
     TWIN_PLAID,
     TWIN_PROVISION_STATUS,
     TWIN_PUBLIC_PROVISION_STATUS,
+    TWIN_SALESFORCE,
+    TWIN_SALESFORCE_PROVISION_STATUS,
     TWIN_STRIPE,
 )
 
@@ -24,6 +27,9 @@ from .conftest import (
 
 
 class TestListTwins:
+    def test_known_twin_names_include_salesforce(self) -> None:
+        assert "salesforce" in get_args(KnownTwinName)
+
     def test_list(self, client: Arga, mock_router: respx.Router) -> None:
         mock_router.get("/validate/twins").mock(
             return_value=httpx.Response(200, json=[TWIN_STRIPE, TWIN_PLAID])
@@ -44,6 +50,15 @@ class TestListTwins:
         assert plaid.label == "Slack"
         assert plaid.mcp is not None
         assert plaid.mcp["path"] == "/mcp"
+
+    def test_list_includes_salesforce(self, client: Arga, mock_router: respx.Router) -> None:
+        mock_router.get("/validate/twins").mock(return_value=httpx.Response(200, json=[TWIN_SALESFORCE]))
+        twins = client.twins.list()
+
+        assert len(twins) == 1
+        assert twins[0].name == "salesforce"
+        assert twins[0].label == "Salesforce"
+        assert twins[0].kind == "backend"
 
     def test_list_empty(self, client: Arga, mock_router: respx.Router) -> None:
         mock_router.get("/validate/twins").mock(
@@ -130,6 +145,16 @@ class TestProvision:
         body = json.loads(route.calls[0].request.content)
         assert body["public"] is True
 
+    def test_provision_salesforce(self, client: Arga, mock_router: respx.Router) -> None:
+        route = mock_router.post("/validate/twins/provision").mock(
+            return_value=httpx.Response(200, json={"run_id": "run_sf123", "status": "provisioning"})
+        )
+        client.twins.provision(["salesforce"], ttl_minutes=45)
+
+        body = json.loads(route.calls[0].request.content)
+        assert body["twins"] == ["salesforce"]
+        assert body["ttl_minutes"] == 45
+
 
 class TestGetStatus:
     def test_get_status(self, client: Arga, mock_router: respx.Router) -> None:
@@ -193,6 +218,24 @@ class TestGetStatus:
         assert slack_inst.mcp_url.endswith("/mcp")
         assert slack_inst.mcp is not None
         assert slack_inst.mcp["path"] == "/mcp"
+
+    def test_get_status_salesforce_env_vars(self, client: Arga, mock_router: respx.Router) -> None:
+        mock_router.get("/validate/twins/provision/run_sf123/status").mock(
+            return_value=httpx.Response(200, json=TWIN_SALESFORCE_PROVISION_STATUS)
+        )
+        status = client.twins.get_status("run_sf123")
+
+        assert status.is_public is True
+        assert status.twins is not None
+        salesforce = status.twins["salesforce"]
+        assert isinstance(salesforce, TwinInstance)
+        assert salesforce.base_url is not None
+        assert salesforce.base_url.startswith("https://pub-r")
+        assert salesforce.env_vars == {
+            "SALESFORCE_ACCESS_TOKEN": "00D000000000001!salesforce-twin-token",
+            "SALESFORCE_INSTANCE_URL": salesforce.base_url,
+            "SALESFORCE_API_BASE_URL": salesforce.base_url,
+        }
 
 
 class TestReset:

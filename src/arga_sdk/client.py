@@ -181,13 +181,13 @@ class _SyncTwins:
         """Provision a set of twins.
 
         Args:
-            twins: Twin names to provision (e.g. ``["slack", "stripe"]``).
+            twins: Twin names to provision (e.g. ``["slack", "stripe", "salesforce"]``).
             ttl_minutes: How long to keep the environment alive.
             scenario_id: Optional scenario to seed twin state from.
             public: Whether the returned ``base_url`` for each twin should be
                 a public ``pub-r<id>--<surface>`` host that's directly
                 callable without proxy auth (so you can drop it straight
-                into a Slack/Stripe/Discord SDK). When ``None`` (default),
+                into a Slack/Stripe/Salesforce/Discord SDK). When ``None`` (default),
                 the server picks its own default (currently ``True``). Pass
                 ``False`` to force a private, proxy-auth-gated environment.
         """
@@ -457,13 +457,13 @@ class _AsyncTwins:
         """Provision a set of twins.
 
         Args:
-            twins: Twin names to provision (e.g. ``["slack", "stripe"]``).
+            twins: Twin names to provision (e.g. ``["slack", "stripe", "salesforce"]``).
             ttl_minutes: How long to keep the environment alive.
             scenario_id: Optional scenario to seed twin state from.
             public: Whether the returned ``base_url`` for each twin should be
                 a public ``pub-r<id>--<surface>`` host that's directly
                 callable without proxy auth (so you can drop it straight
-                into a Slack/Stripe/Discord SDK). When ``None`` (default),
+                into a Slack/Stripe/Salesforce/Discord SDK). When ``None`` (default),
                 the server picks its own default (currently ``True``). Pass
                 ``False`` to force a private, proxy-auth-gated environment.
         """

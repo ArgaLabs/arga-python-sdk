@@ -26,7 +26,7 @@ client = Arga(api_key="arga_...")
 # Create a URL run with service twins
 run = client.runs.create_url_run(
     url="https://staging.myapp.com",
-    twins=["stripe", "slack"],
+    twins=["stripe", "slack", "salesforce"],
 )
 print(run.run_id, run.status)
 
@@ -110,7 +110,7 @@ Choose an example based on the customer job you want to model:
 - [`examples/validate_staging_release.py`](examples/validate_staging_release.py): validate staging before a release
 - [`examples/create_checkout_scenario.py`](examples/create_checkout_scenario.py): create a reusable checkout scenario
 - [`examples/ensure_scenario_twin_urls.py`](examples/ensure_scenario_twin_urls.py): ensure stable scenario twin URLs
-- [`examples/provision_checkout_twins.py`](examples/provision_checkout_twins.py): provision disposable integrations like Stripe
+- [`examples/provision_checkout_twins.py`](examples/provision_checkout_twins.py): provision disposable integrations like Stripe or Salesforce
 - [`examples/explore_staging_with_agent.py`](examples/explore_staging_with_agent.py): let Arga explore staging autonomously
 
 See [`examples/README.md`](examples/README.md) for exact commands, required
