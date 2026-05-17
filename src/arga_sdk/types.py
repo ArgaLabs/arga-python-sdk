@@ -17,6 +17,7 @@ KnownTwinName: TypeAlias = Literal[
     "hubspot",
     "jira",
     "linear",
+    "linkedin",
     "notion",
     "postgres",
     "salesforce",
