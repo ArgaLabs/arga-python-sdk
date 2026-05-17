@@ -1,9 +1,31 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal, TypeAlias
 
 from pydantic import BaseModel, ConfigDict
+
+KnownTwinName: TypeAlias = Literal[
+    "box",
+    "discord",
+    "dropbox",
+    "github",
+    "gitlab",
+    "gmail",
+    "google_calendar",
+    "google_drive",
+    "hubspot",
+    "jira",
+    "linear",
+    "linkedin",
+    "notion",
+    "postgres",
+    "salesforce",
+    "slack",
+    "stripe",
+    "unified",
+    "unstructured",
+]
 
 
 class Run(BaseModel):

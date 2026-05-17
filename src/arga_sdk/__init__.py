@@ -3,6 +3,7 @@
 from arga_sdk.client import Arga, AsyncArga
 from arga_sdk.exceptions import ArgaAPIError, ArgaError
 from arga_sdk.types import (
+    KnownTwinName,
     Run,
     RunDetail,
     Scenario,
@@ -16,6 +17,7 @@ __all__ = [
     "AsyncArga",
     "ArgaAPIError",
     "ArgaError",
+    "KnownTwinName",
     "Run",
     "RunDetail",
     "Scenario",

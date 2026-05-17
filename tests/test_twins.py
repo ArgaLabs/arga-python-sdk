@@ -1,12 +1,20 @@
 from __future__ import annotations
 
 import json
+from typing import get_args
 
 import httpx
 import pytest
 import respx
 
-from arga_sdk import Arga, AsyncArga, Twin, TwinInstance, TwinProvisionStatus
+from arga_sdk import (
+    Arga,
+    AsyncArga,
+    KnownTwinName,
+    Twin,
+    TwinInstance,
+    TwinProvisionStatus,
+)
 
 from .conftest import (
     TEST_BASE_URL,
@@ -22,6 +30,9 @@ from .conftest import (
 
 
 class TestListTwins:
+    def test_known_twin_names_include_linkedin(self) -> None:
+        assert "linkedin" in get_args(KnownTwinName)
+
     def test_list(self, client: Arga, mock_router: respx.Router) -> None:
         mock_router.get("/validate/twins").mock(
             return_value=httpx.Response(200, json=[TWIN_STRIPE, TWIN_PLAID])
