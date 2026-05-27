@@ -26,7 +26,7 @@ client = Arga(api_key="arga_...")
 # Create a URL run with service twins
 run = client.runs.create_url_run(
     url="https://staging.myapp.com",
-    twins=["stripe", "slack", "salesforce"],
+    twins=["stripe", "slack", "salesforce", "waterfall"],
 )
 print(run.run_id, run.status)
 

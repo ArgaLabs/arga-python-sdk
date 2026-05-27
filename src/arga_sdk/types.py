@@ -25,6 +25,7 @@ KnownTwinName: TypeAlias = Literal[
     "stripe",
     "unified",
     "unstructured",
+    "waterfall",
 ]
 
 
