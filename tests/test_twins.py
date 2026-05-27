@@ -41,6 +41,9 @@ class TestListTwins:
     def test_known_twin_names_include_linkedin(self) -> None:
         assert "linkedin" in get_args(KnownTwinName)
 
+    def test_known_twin_names_include_waterfall(self) -> None:
+        assert "waterfall" in get_args(KnownTwinName)
+
     def test_list(self, client: Arga, mock_router: respx.Router) -> None:
         mock_router.get("/validate/twins").mock(
             return_value=httpx.Response(200, json=[TWIN_STRIPE, TWIN_PLAID])
