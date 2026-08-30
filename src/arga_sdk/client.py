@@ -17,7 +17,14 @@ from arga_sdk.types import (
 )
 
 _DEFAULT_BASE_URL = "https://app.argalabs.com"
-_TERMINAL_STATUSES = {"completed", "failed", "cancelled"}
+_TERMINAL_STATUSES = {
+    "completed",
+    "failed",
+    "cancelled",
+    "canceled",
+    "error",
+    "timed_out",
+}
 
 
 # ---------------------------------------------------------------------------
