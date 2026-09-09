@@ -5,6 +5,9 @@ from typing import Any, Literal, TypeAlias
 
 from pydantic import BaseModel, ConfigDict, Field
 
+ScenarioGenerationMode: TypeAlias = Literal["fast", "thorough"]
+"""Fast favors speed; thorough handles complex requirements with a longer wait."""
+
 KnownTwinName: TypeAlias = Literal[
     "box",
     "discord",
