@@ -152,6 +152,31 @@ edits, and expected output for each example.
 | `client.scenarios.delete_twin_environment(scenario_id)` | Tear down a permanent twin environment |
 | `client.scenarios.list_twin_environments()` | List permanent scenario twin environments |
 
+## Scenario generation modes
+
+```python
+scenario = client.scenarios.create(
+    name="Support escalation",
+    prompt="A Slack support channel with linked escalation threads and consistent message authors",
+    generation_mode="thorough",
+)
+```
+
+Fast is the default for everyday scenarios. Thorough handles complex requirements with a longer wait. Explicit `seed_config` bypasses generation. Import `ScenarioGenerationMode` from `arga_sdk` for typed helpers.
+
+### Generate seed data from a prompt
+
+```python
+result = client.twins.provision(
+    twins=["slack"],
+    scenario_prompt="A support channel with linked escalation threads and consistent message authors",
+    scenario_generation_mode="thorough",
+)
+run_id = result["run_id"]
+```
+
+Use `scenario_generation_mode="fast"` for everyday scenarios, or omit it to use the server's Fast default. Thorough handles complex requirements with a longer wait. A `scenario_id` takes precedence and reuses saved seed data. These options work with both `Arga` and `AsyncArga`; await calls on the async client.
+
 ## Error Handling
 
 ```python

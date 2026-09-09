@@ -10,6 +10,7 @@ from arga_sdk.types import (
     Run,
     RunDetail,
     Scenario,
+    ScenarioGenerationMode,
     ScenarioTwinEnvironment,
     Twin,
     TwinProvisionStatus,
@@ -176,6 +177,8 @@ class _SyncTwins:
         *,
         ttl_minutes: int = 60,
         scenario_id: str | None = None,
+        scenario_prompt: str | None = None,
+        scenario_generation_mode: ScenarioGenerationMode | None = None,
         public: bool | None = None,
     ) -> dict[str, str]:
         """Provision a set of twins.
@@ -183,7 +186,11 @@ class _SyncTwins:
         Args:
             twins: Twin names to provision (e.g. ``["slack", "stripe", "salesforce"]``).
             ttl_minutes: How long to keep the environment alive.
-            scenario_id: Optional scenario to seed twin state from.
+            scenario_id: Optional saved scenario to seed twin state from.
+            scenario_prompt: Generate seed data from this prompt when scenario_id is absent.
+            scenario_generation_mode: "fast" (server default) for everyday scenarios, or
+                "thorough" for complex requirements with a longer wait. Only affects
+                scenario_prompt; saved scenarios reuse their seed data.
             public: Whether the returned ``base_url`` for each twin should be
                 a public ``pub-r<id>--<surface>`` host that's directly
                 callable without proxy auth (so you can drop it straight
@@ -194,6 +201,10 @@ class _SyncTwins:
         body: dict[str, Any] = {"twins": twins, "ttl_minutes": ttl_minutes}
         if scenario_id is not None:
             body["scenario_id"] = scenario_id
+        if scenario_prompt is not None:
+            body["scenario_prompt"] = scenario_prompt
+        if scenario_generation_mode is not None:
+            body["scenario_generation_mode"] = scenario_generation_mode
         if public is not None:
             body["public"] = public
         return self._http.post("/validate/twins/provision", json=body)  # type: ignore[return-value]
@@ -232,10 +243,19 @@ class _SyncScenarios:
         twins: list[str] | None = None,
         description: str | None = None,
         tags: list[str] | None = None,
+        generation_mode: ScenarioGenerationMode | None = None,
     ) -> Scenario:
+        """Create a scenario from a prompt or explicit seed data.
+
+        generation_mode selects "fast" (server default) for everyday scenarios or
+        "thorough" for complex requirements with a longer wait. It only affects
+        prompt generation; explicit seed_config is used unchanged.
+        """
         body: dict[str, Any] = {"name": name}
         if prompt is not None:
             body["prompt"] = prompt
+        if generation_mode is not None:
+            body["generation_mode"] = generation_mode
         if seed_config is not None:
             body["seed_config"] = seed_config
         if twins is not None:
@@ -452,6 +472,8 @@ class _AsyncTwins:
         *,
         ttl_minutes: int = 60,
         scenario_id: str | None = None,
+        scenario_prompt: str | None = None,
+        scenario_generation_mode: ScenarioGenerationMode | None = None,
         public: bool | None = None,
     ) -> dict[str, str]:
         """Provision a set of twins.
@@ -459,7 +481,11 @@ class _AsyncTwins:
         Args:
             twins: Twin names to provision (e.g. ``["slack", "stripe", "salesforce"]``).
             ttl_minutes: How long to keep the environment alive.
-            scenario_id: Optional scenario to seed twin state from.
+            scenario_id: Optional saved scenario to seed twin state from.
+            scenario_prompt: Generate seed data from this prompt when scenario_id is absent.
+            scenario_generation_mode: "fast" (server default) for everyday scenarios, or
+                "thorough" for complex requirements with a longer wait. Only affects
+                scenario_prompt; saved scenarios reuse their seed data.
             public: Whether the returned ``base_url`` for each twin should be
                 a public ``pub-r<id>--<surface>`` host that's directly
                 callable without proxy auth (so you can drop it straight
@@ -470,6 +496,10 @@ class _AsyncTwins:
         body: dict[str, Any] = {"twins": twins, "ttl_minutes": ttl_minutes}
         if scenario_id is not None:
             body["scenario_id"] = scenario_id
+        if scenario_prompt is not None:
+            body["scenario_prompt"] = scenario_prompt
+        if scenario_generation_mode is not None:
+            body["scenario_generation_mode"] = scenario_generation_mode
         if public is not None:
             body["public"] = public
         return await self._http.post("/validate/twins/provision", json=body)  # type: ignore[return-value]
@@ -508,10 +538,19 @@ class _AsyncScenarios:
         twins: list[str] | None = None,
         description: str | None = None,
         tags: list[str] | None = None,
+        generation_mode: ScenarioGenerationMode | None = None,
     ) -> Scenario:
+        """Create a scenario from a prompt or explicit seed data.
+
+        generation_mode selects "fast" (server default) for everyday scenarios or
+        "thorough" for complex requirements with a longer wait. It only affects
+        prompt generation; explicit seed_config is used unchanged.
+        """
         body: dict[str, Any] = {"name": name}
         if prompt is not None:
             body["prompt"] = prompt
+        if generation_mode is not None:
+            body["generation_mode"] = generation_mode
         if seed_config is not None:
             body["seed_config"] = seed_config
         if twins is not None:
