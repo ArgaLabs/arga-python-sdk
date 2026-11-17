@@ -1,0 +1,667 @@
+{
+  "$defs": {
+    "Error": {
+      "additionalProperties": false,
+      "properties": {
+        "category": {
+          "enum": [
+            "provider",
+            "permission",
+            "rate_limit",
+            "network",
+            "unknown"
+          ],
+          "title": "Category",
+          "type": "string"
+        },
+        "code": {
+          "anyOf": [
+            {
+              "enum": [
+                "rate_limit",
+                "resource_missing",
+                "permission_denied",
+                "invalid_request",
+                "insufficient_funds",
+                "other"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Code"
+        },
+        "http_status": {
+          "anyOf": [
+            {
+              "maximum": 599,
+              "minimum": 400,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Http Status"
+        }
+      },
+      "required": [
+        "category"
+      ],
+      "title": "Error",
+      "type": "object"
+    },
+    "Event": {
+      "additionalProperties": false,
+      "properties": {
+        "complete": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Complete"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Error"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "parameters": {
+          "$ref": "#/$defs/Parameters"
+        },
+        "provider": {
+          "enum": [
+            "gmail",
+            "stripe"
+          ],
+          "title": "Provider",
+          "type": "string"
+        },
+        "records": {
+          "items": {
+            "$ref": "#/$defs/Record"
+          },
+          "maxItems": 50,
+          "title": "Records",
+          "type": "array"
+        },
+        "resource": {
+          "enum": [
+            "customers",
+            "payment_intents",
+            "charges",
+            "refunds",
+            "messages",
+            "drafts",
+            "profile"
+          ],
+          "title": "Resource",
+          "type": "string"
+        },
+        "scope": {
+          "enum": [
+            "resource",
+            "result_page",
+            "mutation"
+          ],
+          "title": "Scope",
+          "type": "string"
+        },
+        "sequence": {
+          "maximum": 100,
+          "minimum": 1,
+          "title": "Sequence",
+          "type": "integer"
+        },
+        "verb": {
+          "enum": [
+            "retrieve",
+            "get",
+            "list",
+            "search",
+            "create",
+            "update",
+            "send",
+            "modify",
+            "trash",
+            "untrash",
+            "delete"
+          ],
+          "title": "Verb",
+          "type": "string"
+        }
+      },
+      "required": [
+        "sequence",
+        "provider",
+        "resource",
+        "verb",
+        "scope"
+      ],
+      "title": "Event",
+      "type": "object"
+    },
+    "Parameters": {
+      "additionalProperties": false,
+      "properties": {
+        "amount": {
+          "anyOf": [
+            {
+              "maximum": 1000000000000,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Amount"
+        },
+        "charge": {
+          "anyOf": [
+            {
+              "pattern": "^(cus|pi|ch|re|msg|thread|draft|actor|label)_[a-f0-9]{24}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Charge"
+        },
+        "currency": {
+          "anyOf": [
+            {
+              "pattern": "^[a-z]{3}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Currency"
+        },
+        "customer": {
+          "anyOf": [
+            {
+              "pattern": "^(cus|pi|ch|re|msg|thread|draft|actor|label)_[a-f0-9]{24}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Customer"
+        },
+        "id": {
+          "anyOf": [
+            {
+              "pattern": "^(cus|pi|ch|re|msg|thread|draft|actor|label)_[a-f0-9]{24}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Id"
+        },
+        "payment_intent": {
+          "anyOf": [
+            {
+              "pattern": "^(cus|pi|ch|re|msg|thread|draft|actor|label)_[a-f0-9]{24}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Payment Intent"
+        },
+        "user": {
+          "anyOf": [
+            {
+              "pattern": "^(cus|pi|ch|re|msg|thread|draft|actor|label)_[a-f0-9]{24}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "User"
+        }
+      },
+      "title": "Parameters",
+      "type": "object"
+    },
+    "Record": {
+      "additionalProperties": false,
+      "properties": {
+        "amount": {
+          "anyOf": [
+            {
+              "maximum": 1000000000000,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Amount"
+        },
+        "amount_refunded": {
+          "anyOf": [
+            {
+              "maximum": 1000000000000,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Amount Refunded"
+        },
+        "body": {
+          "anyOf": [
+            {
+              "maxLength": 4000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Body"
+        },
+        "captured": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Captured"
+        },
+        "charge": {
+          "anyOf": [
+            {
+              "pattern": "^(cus|pi|ch|re|msg|thread|draft|actor|label)_[a-f0-9]{24}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Charge"
+        },
+        "created": {
+          "anyOf": [
+            {
+              "maximum": 253402300799,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Created"
+        },
+        "currency": {
+          "anyOf": [
+            {
+              "pattern": "^[a-z]{3}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Currency"
+        },
+        "customer": {
+          "anyOf": [
+            {
+              "pattern": "^(cus|pi|ch|re|msg|thread|draft|actor|label)_[a-f0-9]{24}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Customer"
+        },
+        "email": {
+          "anyOf": [
+            {
+              "pattern": "^person_[a-f0-9]{24}@example\\.invalid$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Email"
+        },
+        "from": {
+          "anyOf": [
+            {
+              "pattern": "^person_[a-f0-9]{24}@example\\.invalid$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "From"
+        },
+        "id": {
+          "pattern": "^(cus|pi|ch|re|msg|thread|draft|actor|label)_[a-f0-9]{24}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "internal_date": {
+          "anyOf": [
+            {
+              "maximum": 253402300799000,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Internal Date"
+        },
+        "labels": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 30,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Labels"
+        },
+        "latest_charge": {
+          "anyOf": [
+            {
+              "pattern": "^(cus|pi|ch|re|msg|thread|draft|actor|label)_[a-f0-9]{24}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Latest Charge"
+        },
+        "message_id": {
+          "anyOf": [
+            {
+              "pattern": "^(cus|pi|ch|re|msg|thread|draft|actor|label)_[a-f0-9]{24}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Message Id"
+        },
+        "paid": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Paid"
+        },
+        "payment_intent": {
+          "anyOf": [
+            {
+              "pattern": "^(cus|pi|ch|re|msg|thread|draft|actor|label)_[a-f0-9]{24}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Payment Intent"
+        },
+        "refunded": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Refunded"
+        },
+        "resource": {
+          "enum": [
+            "customers",
+            "payment_intents",
+            "charges",
+            "refunds",
+            "messages",
+            "drafts",
+            "profile"
+          ],
+          "title": "Resource",
+          "type": "string"
+        },
+        "status": {
+          "anyOf": [
+            {
+              "enum": [
+                "succeeded",
+                "pending",
+                "failed",
+                "canceled",
+                "requires_payment_method",
+                "requires_confirmation",
+                "requires_action",
+                "processing",
+                "requires_capture"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Status"
+        },
+        "subject": {
+          "anyOf": [
+            {
+              "maxLength": 4000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Subject"
+        },
+        "thread_id": {
+          "anyOf": [
+            {
+              "pattern": "^(cus|pi|ch|re|msg|thread|draft|actor|label)_[a-f0-9]{24}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Thread Id"
+        },
+        "to": {
+          "anyOf": [
+            {
+              "items": {
+                "pattern": "^person_[a-f0-9]{24}@example\\.invalid$",
+                "type": "string"
+              },
+              "maxItems": 20,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "To"
+        }
+      },
+      "required": [
+        "resource",
+        "id"
+      ],
+      "title": "Record",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "episode_id": {
+      "pattern": "^[a-f0-9]{32}$",
+      "title": "Episode Id",
+      "type": "string"
+    },
+    "events": {
+      "items": {
+        "$ref": "#/$defs/Event"
+      },
+      "maxItems": 100,
+      "title": "Events",
+      "type": "array"
+    },
+    "goal": {
+      "anyOf": [
+        {
+          "maxLength": 4000,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Goal"
+    },
+    "issues": {
+      "items": {
+        "enum": [
+          "unsupported_operation",
+          "projection_failed",
+          "record_limit",
+          "event_limit",
+          "payload_limit",
+          "source_incomplete",
+          "text_dropped",
+          "agent_error"
+        ],
+        "type": "string"
+      },
+      "maxItems": 8,
+      "title": "Issues",
+      "type": "array"
+    },
+    "origin": {
+      "default": "sdk",
+      "enum": [
+        "sdk",
+        "braintrust"
+      ],
+      "title": "Origin",
+      "type": "string"
+    },
+    "policies": {
+      "items": {
+        "maxLength": 4000,
+        "type": "string"
+      },
+      "maxItems": 10,
+      "title": "Policies",
+      "type": "array"
+    },
+    "policy_hash": {
+      "pattern": "^[a-f0-9]{64}$",
+      "title": "Policy Hash",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "arga.evidence.v1",
+      "default": "arga.evidence.v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "source": {
+      "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$",
+      "title": "Source",
+      "type": "string"
+    }
+  },
+  "required": [
+    "source",
+    "episode_id",
+    "policy_hash"
+  ],
+  "title": "Episode",
+  "type": "object"
+}

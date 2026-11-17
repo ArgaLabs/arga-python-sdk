@@ -6,6 +6,7 @@ from typing import Any, Iterator, AsyncIterator
 
 from arga_sdk._http import AsyncHTTPClient, SyncHTTPClient
 from arga_sdk.exceptions import ArgaError
+from arga_sdk.training import AsyncTraining, SyncTraining
 from arga_sdk.types import (
     Run,
     RunDetail,
@@ -635,6 +636,7 @@ class Arga:
         self.runs = _SyncRuns(self._http)
         self.twins = _SyncTwins(self._http)
         self.scenarios = _SyncScenarios(self._http)
+        self.training = SyncTraining(self._http)
 
     def close(self) -> None:
         """Close the underlying HTTP client."""
@@ -667,6 +669,7 @@ class AsyncArga:
         self.runs = _AsyncRuns(self._http)
         self.twins = _AsyncTwins(self._http)
         self.scenarios = _AsyncScenarios(self._http)
+        self.training = AsyncTraining(self._http)
 
     async def close(self) -> None:
         """Close the underlying HTTP client."""
