@@ -295,6 +295,7 @@ def test_already_caught_up_sync_has_consistent_counters(tmp_path):
         ("pending", []),
         ("pending", "PRIVATE_CANARY"),
         ("pending", {"trace": None}),
+        ("pending", {f"trace-{index}": CREATED for index in range(1001)}),
         ("acknowledged", []),
         ("acknowledged", {"episode": {"digest": "bad", "created": CREATED}}),
     ],

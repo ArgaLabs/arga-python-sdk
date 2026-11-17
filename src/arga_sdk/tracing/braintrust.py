@@ -306,7 +306,11 @@ class BraintrustSync:
                         raise ValueError()
                     pending = state.setdefault("pending", {})
                     acknowledged = state["acknowledged"]
-                    if not isinstance(pending, dict) or not isinstance(acknowledged, dict):
+                    if (
+                        not isinstance(pending, dict)
+                        or len(pending) > 1000
+                        or not isinstance(acknowledged, dict)
+                    ):
                         raise ValueError()
                     for trace_id, created in pending.items():
                         if not isinstance(trace_id, str) or not trace_id or not isinstance(created, str):
