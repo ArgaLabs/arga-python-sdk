@@ -2,10 +2,14 @@ from __future__ import annotations
 
 import asyncio
 import time
-from typing import Any, Iterator, AsyncIterator
+from typing import Any, AsyncIterator, Iterator, Literal
 
 from arga_sdk._http import AsyncHTTPClient, SyncHTTPClient
 from arga_sdk.exceptions import ArgaError
+from arga_sdk.resources.scenarios import AsyncScenarioOperations, SyncScenarioOperations
+from arga_sdk.resources.test_runs import AsyncTestRuns, SyncTestRuns
+from arga_sdk.resources.tests import AsyncTests, SyncTests
+from arga_sdk.resources.twin_runs import AsyncTwinRuns, SyncTwinRuns
 from arga_sdk.training import AsyncTraining, SyncTraining
 from arga_sdk.types import (
     Run,
@@ -18,7 +22,7 @@ from arga_sdk.types import (
     TwinResetResult,
 )
 
-_DEFAULT_BASE_URL = "https://app.argalabs.com"
+_DEFAULT_BASE_URL = "https://api.argalabs.com"
 _TERMINAL_STATUSES = {"completed", "failed", "cancelled"}
 
 
@@ -169,7 +173,7 @@ class _SyncTwins:
         self._http = http
 
     def list(self) -> list[Twin]:
-        data = self._http.get("/validate/twins")
+        data = self._http.get("/twins")
         return [Twin.model_validate(item) for item in data]
 
     def provision(
@@ -229,7 +233,7 @@ class _SyncTwins:
         return self._http.post(f"/validate/twins/provision/{run_id}/teardown")  # type: ignore[return-value]
 
 
-class _SyncScenarios:
+class _SyncScenarios(SyncScenarioOperations):
     """Synchronous methods for scenario endpoints."""
 
     def __init__(self, http: SyncHTTPClient) -> None:
@@ -245,6 +249,7 @@ class _SyncScenarios:
         description: str | None = None,
         tags: list[str] | None = None,
         generation_mode: ScenarioGenerationMode | None = None,
+        scope: Literal["personal", "workspace"] | None = None,
     ) -> Scenario:
         """Create a scenario from a prompt or explicit seed data.
 
@@ -257,6 +262,8 @@ class _SyncScenarios:
             body["prompt"] = prompt
         if generation_mode is not None:
             body["generation_mode"] = generation_mode
+        if scope is not None:
+            body["scope"] = scope
         if seed_config is not None:
             body["seed_config"] = seed_config
         if twins is not None:
@@ -273,12 +280,19 @@ class _SyncScenarios:
         *,
         twin: str | None = None,
         tag: str | None = None,
+        scope: Literal["personal", "workspace"] | None = None,
+        include_presets: bool | None = None,
+        limit: int | None = None,
+        offset: int | None = None,
+        search: str | None = None,
     ) -> list[Scenario]:
-        params: dict[str, str] = {}
+        params: dict[str, Any] = {}
         if twin is not None:
             params["twin"] = twin
         if tag is not None:
             params["tag"] = tag
+        filters = {"scope": scope, "include_presets": include_presets, "limit": limit, "offset": offset, "search": search}
+        params.update({key: value for key, value in filters.items() if value is not None})
         data = self._http.get("/scenarios", params=params or None)
         return [Scenario.model_validate(item) for item in data]
 
@@ -292,10 +306,13 @@ class _SyncScenarios:
         *,
         twins: list[str] | None = None,
         public: bool = True,
+        github_actions_mode: Literal["simulated", "execute"] | None = None,
     ) -> ScenarioTwinEnvironment:
         body: dict[str, Any] = {"public": public}
         if twins is not None:
             body["twins"] = twins
+        if github_actions_mode is not None:
+            body["github_actions_mode"] = github_actions_mode
         data = self._http.post(f"/scenarios/{scenario_id}/twin-environment", json=body)
         return ScenarioTwinEnvironment.model_validate(data)
 
@@ -464,7 +481,7 @@ class _AsyncTwins:
         self._http = http
 
     async def list(self) -> list[Twin]:
-        data = await self._http.get("/validate/twins")
+        data = await self._http.get("/twins")
         return [Twin.model_validate(item) for item in data]
 
     async def provision(
@@ -524,7 +541,7 @@ class _AsyncTwins:
         return await self._http.post(f"/validate/twins/provision/{run_id}/teardown")  # type: ignore[return-value]
 
 
-class _AsyncScenarios:
+class _AsyncScenarios(AsyncScenarioOperations):
     """Asynchronous methods for scenario endpoints."""
 
     def __init__(self, http: AsyncHTTPClient) -> None:
@@ -540,6 +557,7 @@ class _AsyncScenarios:
         description: str | None = None,
         tags: list[str] | None = None,
         generation_mode: ScenarioGenerationMode | None = None,
+        scope: Literal["personal", "workspace"] | None = None,
     ) -> Scenario:
         """Create a scenario from a prompt or explicit seed data.
 
@@ -552,6 +570,8 @@ class _AsyncScenarios:
             body["prompt"] = prompt
         if generation_mode is not None:
             body["generation_mode"] = generation_mode
+        if scope is not None:
+            body["scope"] = scope
         if seed_config is not None:
             body["seed_config"] = seed_config
         if twins is not None:
@@ -568,12 +588,19 @@ class _AsyncScenarios:
         *,
         twin: str | None = None,
         tag: str | None = None,
+        scope: Literal["personal", "workspace"] | None = None,
+        include_presets: bool | None = None,
+        limit: int | None = None,
+        offset: int | None = None,
+        search: str | None = None,
     ) -> list[Scenario]:
-        params: dict[str, str] = {}
+        params: dict[str, Any] = {}
         if twin is not None:
             params["twin"] = twin
         if tag is not None:
             params["tag"] = tag
+        filters = {"scope": scope, "include_presets": include_presets, "limit": limit, "offset": offset, "search": search}
+        params.update({key: value for key, value in filters.items() if value is not None})
         data = await self._http.get("/scenarios", params=params or None)
         return [Scenario.model_validate(item) for item in data]
 
@@ -587,10 +614,13 @@ class _AsyncScenarios:
         *,
         twins: list[str] | None = None,
         public: bool = True,
+        github_actions_mode: Literal["simulated", "execute"] | None = None,
     ) -> ScenarioTwinEnvironment:
         body: dict[str, Any] = {"public": public}
         if twins is not None:
             body["twins"] = twins
+        if github_actions_mode is not None:
+            body["github_actions_mode"] = github_actions_mode
         data = await self._http.post(f"/scenarios/{scenario_id}/twin-environment", json=body)
         return ScenarioTwinEnvironment.model_validate(data)
 
@@ -622,7 +652,7 @@ class Arga:
     Usage::
 
         client = Arga(api_key="arga_...")
-        run = client.runs.create_url_run(url="https://staging.myapp.com")
+        run = client.test_runs.create("Verify checkout", start_url="https://staging.myapp.com")
     """
 
     def __init__(
@@ -637,6 +667,9 @@ class Arga:
         self.twins = _SyncTwins(self._http)
         self.scenarios = _SyncScenarios(self._http)
         self.training = SyncTraining(self._http)
+        self.twin_runs = SyncTwinRuns(self._http)
+        self.test_runs = SyncTestRuns(self._http)
+        self.tests = SyncTests(self._http)
 
     def close(self) -> None:
         """Close the underlying HTTP client."""
@@ -655,7 +688,7 @@ class AsyncArga:
     Usage::
 
         client = AsyncArga(api_key="arga_...")
-        run = await client.runs.create_url_run(url="https://staging.myapp.com")
+        run = await client.test_runs.create("Verify checkout", start_url="https://staging.myapp.com")
     """
 
     def __init__(
@@ -670,6 +703,9 @@ class AsyncArga:
         self.twins = _AsyncTwins(self._http)
         self.scenarios = _AsyncScenarios(self._http)
         self.training = AsyncTraining(self._http)
+        self.twin_runs = AsyncTwinRuns(self._http)
+        self.test_runs = AsyncTestRuns(self._http)
+        self.tests = AsyncTests(self._http)
 
     async def close(self) -> None:
         """Close the underlying HTTP client."""

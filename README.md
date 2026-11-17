@@ -1,196 +1,155 @@
 # Arga Python SDK
 
-Typed Python client for the [Arga](https://argalabs.com) API. Supports both synchronous and asynchronous usage.
+Python client for Arga's Twin Runs, Saved Tests, browser Test Runs, Scenarios and
+Training APIs, with synchronous and asynchronous clients. Customer-side tracing
+and its Gmail/Stripe dependencies are included in the standard package.
 
 ## Installation
 
-Install with `uv`:
-
-```bash
+```sh
+pip install arga-py-sdk
+# or
 uv add arga-py-sdk
 ```
 
-Or, if you're using `pip`:
+These additions are in v0.2.0, which must be released before the commands above
+install them. During development use `pip install -e '.[dev]'` from this checkout.
+Python 3.10 or later is required. Installing or importing the SDK does not enable
+tracing; collection starts only when explicitly configured in your application.
 
-```bash
-pip install arga-py-sdk
-```
+The default API URL is `https://api.argalabs.com`. The dashboard is
+`https://app.argalabs.com`. Pass `base_url` explicitly for another API environment.
 
-## Quick Start
+## Run a browser test
 
 ```python
+import os
 from arga_sdk import Arga
 
-client = Arga(api_key="arga_...")
+with Arga(api_key=os.environ["ARGA_API_KEY"]) as client:
+    run = client.test_runs.create(
+        prompt="Sign in, open billing, and verify the checkout flow.",
+        start_url="https://staging.example.com",
+    )
+    result = client.test_runs.wait(run.id, timeout=600)
+    print(result.status, result.summary_text)
 
-# Create a URL run with service twins
-run = client.runs.create_url_run(
-    url="https://staging.myapp.com",
-    twins=["stripe", "slack", "salesforce", "waterfall"],
-)
-print(run.run_id, run.status)
-
-# Poll until the run completes
-detail = client.runs.wait(run.run_id, timeout=300)
-print(detail.status, detail.results_json)
-
-# Stream live results
-for event in client.runs.stream_results(run.run_id):
-    print(event)
-
-# Cancel a run
-client.runs.cancel(run.run_id)
+    # Save the recorded, editable TestConfig for reuse after inspecting it.
+    if result.status == "completed" and result.test_config_json:
+        test = client.tests.create("Checkout regression", run_id=result.id)
+        rerun = client.tests.run(test.id, start_url="https://preview.example.com")
 ```
 
-## Async Usage
+Test Runs execute browser flows against an already reachable application. Provision
+twins separately and configure your application with their endpoints before testing.
+The Test Run's `twins`, `scenario_id`, repository and PR fields record context; they
+do not deploy application code or automatically provision services.
+
+## Provision twins
 
 ```python
-import asyncio
+with Arga(api_key=os.environ["ARGA_API_KEY"]) as client:
+    run = client.twin_runs.create(
+        ["gmail", "stripe"], ttl_minutes=60, public=False,
+        scenario_prompt="A support mailbox with a duplicate payment needing review.",
+        scenario_generation_mode="thorough",
+    )
+    status = client.twin_runs.wait(run.run_id)
+    if status.status == "ready":
+        stripe_url = status.twins["stripe"].base_url
+        # Configure your application with returned endpoints and credentials.
+    client.twin_runs.teardown(run.run_id)
+```
+
+Creating a Twin Run returns an accepted `run_id`; poll `get` or `wait` for state,
+progress, endpoints and any structured failure. `wait` returns terminal failures
+too, so inspect its status. Limits and access checks remain enforced by the backend.
+`public=False` requires the returned proxy credential when calling private surfaces.
+
+## Async usage
+
+Every resource operation has the same interface on `AsyncArga`:
+
+```python
 from arga_sdk import AsyncArga
 
-async def main():
-    client = AsyncArga(api_key="arga_...")
-
-    run = await client.runs.create_url_run(url="https://staging.myapp.com")
-
-    # Stream results
-    async for event in client.runs.stream_results(run.run_id):
-        print(event)
-
-    # Wait for completion
-    detail = await client.runs.wait(run.run_id)
-    print(detail.status)
-
-    await client.close()
-
-asyncio.run(main())
+async def check_release():
+    async with AsyncArga(api_key=os.environ["ARGA_API_KEY"]) as client:
+        run = await client.test_runs.create(
+            "Verify checkout", start_url="https://staging.example.com",
+        )
+        return await client.test_runs.wait(run.id)
 ```
 
-## Context Manager
+## Current resource methods
 
-Both clients support context managers to ensure proper cleanup:
+| Namespace | Operations |
+| --- | --- |
+| `client.twins` | `list()` retrieves the current twin catalog |
+| `client.twin_runs` | `create`, `get`, `wait`, `extend`, `reset`, `lock`, `teardown`, `microsoft_scenario_snapshot` |
+| `client.tests` | `create`, `list`, `get`, `update`, `delete`, `run` |
+| `client.test_runs` | `create`, `list`, `get`, `rerun`, `update_config`, `send_message`, `artifact_url`, `wait` |
+| `client.scenarios` | `create`, `list`, `get`, `update`, `copy`, `delete`, `list_presets`, `get_preset`, `list_long_runs`; existing environment methods |
+| `client.training` | `create_upload_key`, `upload_evidence`, `list`, `get`, `generate_task`, `update_task`, `review_task`, `prepare_grader`, `get_grader`, `test_grader`, `create_environment`, `export_jsonl` |
+
+List methods return Python lists, unwrapping the backend's Saved Test/Test Run
+response envelopes. `tests.list(repo_full_name=...)` filters by repository.
+`scenarios.list` supports `twin`, `tag`, `scope`, `include_presets`, `search`,
+`limit` and `offset`. Scenario creation supports personal/workspace scope and
+Fast/Thorough generation. Scenario environment creation also accepts
+`github_actions_mode`; Twin Runs additionally accept `access_profile`.
+
+Updates preserve omitted fields and explicit nulls separately:
 
 ```python
-with Arga(api_key="arga_...") as client:
-    run = client.runs.create_url_run(url="https://staging.myapp.com")
-
-async with AsyncArga(api_key="arga_...") as client:
-    run = await client.runs.create_url_run(url="https://staging.myapp.com")
+client.tests.update(test_id, description=None, repo_full_name=None, ci_enabled=False)
+client.scenarios.update(scenario_id, description=None, tags=[])
 ```
 
-## Examples
+`artifact_url(run_id, filename)` returns the backend's signed storage URL without
+forwarding the Arga credential to storage. Fetch that URL separately if needed.
+Run events are available in `test_runs.get(run_id).events_json`; the backend's
+browser WebSocket stream requires a session JWT and is not exposed as an API-key
+SSE stream. `test_runs.list()` currently returns the backend's latest 25 runs.
+Reset uses the backend's existing `/validate/twins/provision/{id}/reset` route;
+the other Twin Run lifecycle methods use `/twin-runs`.
 
-Runnable examples live in [`examples/`](examples/README.md). They are the best
-way to see realistic customer workflows end to end.
+The older `client.runs.*` and twin provision/status helpers remain available for
+compatibility. New integrations should use the current resource methods above.
+Historical custom-code/agent deployment is not a current SDK quickstart workflow.
 
-Before running any example, set your API key:
+## Training review
 
-```bash
-export ARGA_API_KEY=arga_your_api_key
-```
-
-If you need a non-default API environment, you can also set:
-
-```bash
-export ARGA_BASE_URL=https://app.argalabs.com
-```
-
-Start with the staging validation example:
-
-```bash
-uv run python examples/validate_staging_release.py
-```
-
-Each example is a small workflow script with an editable config block near the
-top of the file. Open the file, adjust the business-specific values, then run
-it with `uv`.
-
-Choose an example based on the customer job you want to model:
-
-- [`examples/validate_staging_release.py`](examples/validate_staging_release.py): validate staging before a release
-- [`examples/create_checkout_scenario.py`](examples/create_checkout_scenario.py): create a reusable checkout scenario
-- [`examples/ensure_scenario_twin_urls.py`](examples/ensure_scenario_twin_urls.py): ensure stable scenario twin URLs
-- [`examples/provision_checkout_twins.py`](examples/provision_checkout_twins.py): provision disposable integrations like Stripe or Salesforce
-- [`examples/explore_staging_with_agent.py`](examples/explore_staging_with_agent.py): let Arga explore staging autonomously
-
-See [`examples/README.md`](examples/README.md) for exact commands, required
-edits, and expected output for each example.
-
-## Available Methods
-
-### Runs
-
-| Method | Description |
-|--------|-------------|
-| `client.runs.create_url_run(url, ...)` | Test a live URL with browser validation |
-| `client.runs.create_pr_run(repo, ...)` | Validate code changes from a PR or branch |
-| `client.runs.create_agent_run(repo, ...)` | Deploy an autonomous agent for PR or branch exploration |
-| `client.runs.get(run_id)` | Get full run details |
-| `client.runs.stream_results(run_id)` | Stream SSE result events |
-| `client.runs.cancel(run_id)` | Cancel a running run |
-| `client.runs.wait(run_id, ...)` | Poll until terminal status |
-
-### Twins
-
-| Method | Description |
-|--------|-------------|
-| `client.twins.list()` | List available service twins |
-| `client.twins.provision(twins, ...)` | Provision twin instances |
-| `client.twins.get_status(run_id)` | Get provisioning status |
-| `client.twins.extend(run_id, ...)` | Extend twin TTL |
-
-### Scenarios
-
-| Method | Description |
-|--------|-------------|
-| `client.scenarios.create(name, ...)` | Create a test scenario |
-| `client.scenarios.list(...)` | List scenarios (with optional filters) |
-| `client.scenarios.get(scenario_id)` | Get a scenario by ID |
-| `client.scenarios.ensure_twin_environment(scenario_id, ...)` | Create or return permanent twin URLs for a scenario |
-| `client.scenarios.get_twin_environment(scenario_id)` | Get permanent twin environment status and URLs |
-| `client.scenarios.reseed_twin_environment(scenario_id)` | Reseed a permanent twin environment from the scenario |
-| `client.scenarios.delete_twin_environment(scenario_id)` | Tear down a permanent twin environment |
-| `client.scenarios.list_twin_environments()` | List permanent scenario twin environments |
-
-## Scenario generation modes
+Agent processes should hold a source-bound upload key and send locally filtered
+evidence. An authenticated control-plane client can then inspect and prepare tasks:
 
 ```python
-scenario = client.scenarios.create(
-    name="Support escalation",
-    prompt="A Slack support channel with linked escalation threads and consistent message authors",
-    generation_mode="thorough",
-)
+dataset = client.training.get(dataset_id)
+task = client.training.generate_task(dataset.id, trace_id=dataset.traces[0]["id"])
+grader = client.training.get_grader(dataset.id, task.id)
+# Review the task, assumptions, starting state and grader before approving it.
 ```
 
-Fast is the default for everyday scenarios. Thorough handles complex requirements with a longer wait. Explicit `seed_config` bypasses generation. Import `ScenarioGenerationMode` from `arga_sdk` for typed helpers.
+Task edits and review calls require the current revision. Approval requires explicit
+assumption and grader acknowledgements. `export_jsonl` returns approved task records
+as the backend's JSONL text, preserving provenance and grader artifacts. Environment
+creation provisions reviewed Scenario twins; it does not host customer agents or train
+models. Upload-only credentials cannot perform these administrative operations.
+Generation can take several minutes; configure `Arga(timeout=300)` or
+`AsyncArga(timeout=300)` for task generation or Thorough scenario generation.
 
-### Generate seed data from a prompt
+## Examples and errors
 
-```python
-result = client.twins.provision(
-    twins=["slack"],
-    scenario_prompt="A support channel with linked escalation threads and consistent message authors",
-    scenario_generation_mode="thorough",
-)
-run_id = result["run_id"]
-```
-
-Use `scenario_generation_mode="fast"` for everyday scenarios, or omit it to use the server's Fast default. Thorough handles complex requirements with a longer wait. A `scenario_id` takes precedence and reuses saved seed data. These options work with both `Arga` and `AsyncArga`; await calls on the async client.
-
-## Error Handling
+Runnable workflows are in [examples/README.md](examples/README.md). Configure your
+application and credentials before running a live example; tests use mocked transports.
 
 ```python
-from arga_sdk import Arga, ArgaAPIError, ArgaError
-
-client = Arga(api_key="arga_...")
+from arga_sdk import ArgaAPIError, ArgaError
 
 try:
-    run = client.runs.get("nonexistent-id")
-except ArgaAPIError as e:
-    print(e.status_code)  # e.g. 404
-    print(e.message)
-except ArgaError as e:
-    print(e.message)
+    result = client.test_runs.get(run_id)
+except ArgaAPIError as error:
+    print(error.status_code, error.message)
 ```
 
 ## Customer-side tracing for Training
@@ -200,14 +159,14 @@ Selection, identity aliases and text filtering run in your process. Provider API
 headers, arbitrary metadata, model prompts/reasoning, raw MIME and attachments are not
 exported. Free text is disabled until you explicitly select fields.
 
-Install the optional provider libraries if your application does not already have them:
+Install the standard package, including tracing and the Gmail/Stripe client libraries:
 
 ```sh
-pip install 'arga-py-sdk[tracing]'
+pip install arga-py-sdk
 ```
 
 This version must be released before that command installs v0.2. For development,
-install this checkout with `pip install -e '.[dev,tracing]'`.
+install this checkout with `pip install -e '.[dev]'`.
 
 Create a source-bound upload key once, outside your agent process, using a full Arga
 credential. Store the returned secret in your own secret manager as `ARGA_TRACE_KEY`:

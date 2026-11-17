@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 import os
-import time
-
-from arga_sdk import Arga, TwinProvisionStatus
 
 from _shared import handle_fatal_error, print_json, require_env
+
+from arga_sdk import Arga, TwinProvisionStatus
 
 twin_setup = {
     "twins": ["stripe"],
@@ -16,32 +15,13 @@ twin_setup = {
     "timeout_seconds": 300.0,
 }
 
-terminal_statuses = {
-    "ready",
-    "failed",
-    "cancelled",
-    "error",
-    "timed_out",
-    "expired",
-}
-
 
 def wait_for_ready(client: Arga, run_id: str) -> TwinProvisionStatus:
-    deadline = time.monotonic() + twin_setup["timeout_seconds"]
-
-    while True:
-        status = client.twins.get_status(run_id)
-        print(f"Twin provisioning status: {status.status}")
-
-        if status.error is not None or status.status in terminal_statuses:
-            return status
-
-        if time.monotonic() >= deadline:
-            raise RuntimeError(
-                "Timed out waiting for twin provisioning to finish."
-            )
-
-        time.sleep(twin_setup["poll_interval_seconds"])
+    return client.twin_runs.wait(
+        run_id,
+        poll_interval=twin_setup["poll_interval_seconds"],
+        timeout=twin_setup["timeout_seconds"],
+    )
 
 
 def main() -> None:
@@ -51,13 +31,13 @@ def main() -> None:
         client_kwargs["base_url"] = base_url
 
     with Arga(**client_kwargs) as client:
-        provisioned = client.twins.provision(
+        provisioned = client.twin_runs.create(
             twin_setup["twins"],
             ttl_minutes=twin_setup["ttl_minutes"],
         )
-        print_json("Provision request accepted", provisioned)
+        print_json("Provision request accepted", provisioned.model_dump(mode="json", exclude_none=True))
 
-        status = wait_for_ready(client, provisioned["run_id"])
+        status = wait_for_ready(client, provisioned.run_id)
 
         print_json(
             "Provisioning summary",
@@ -69,7 +49,7 @@ def main() -> None:
             },
         )
 
-        if status.error is not None:
+        if status.status != "ready" or status.error is not None:
             raise RuntimeError(f"Twin provisioning failed: {status.error}")
 
         if status.twins:
@@ -83,10 +63,7 @@ def main() -> None:
                     },
                 )
 
-        print(
-            "\nCopy the env vars above into your staging or QA environment "
-            "before running the dependent flow."
-        )
+        print("\nCopy the env vars above into your staging or QA environment before running the dependent flow.")
 
 
 if __name__ == "__main__":

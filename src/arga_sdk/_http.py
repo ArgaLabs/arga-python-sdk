@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Iterator, AsyncIterator
+from typing import Any, AsyncIterator, Iterator
 
 import httpx
 import httpx_sse
@@ -46,6 +46,26 @@ class SyncHTTPClient:
         response = self._client.post(path, json=json)
         _raise_for_status(response)
         return response.json()
+
+    def put(self, path: str, json: dict[str, Any]) -> Any:
+        response = self._client.put(path, json=json)
+        _raise_for_status(response)
+        return response.json()
+
+    def patch(self, path: str, json: dict[str, Any]) -> Any:
+        response = self._client.patch(path, json=json)
+        _raise_for_status(response)
+        return response.json()
+
+    def get_text(self, path: str) -> str:
+        response = self._client.get(path)
+        _raise_for_status(response)
+        return response.text
+
+    def get_redirect(self, path: str) -> str:
+        # Return the signed artifact URL without forwarding Arga credentials to storage.
+        response = self._client.get(path, follow_redirects=False)
+        return _redirect_url(response)
 
     def delete(self, path: str) -> Any:
         response = self._client.delete(path)
@@ -98,6 +118,25 @@ class AsyncHTTPClient:
         _raise_for_status(response)
         return response.json()
 
+    async def put(self, path: str, json: dict[str, Any]) -> Any:
+        response = await self._client.put(path, json=json)
+        _raise_for_status(response)
+        return response.json()
+
+    async def patch(self, path: str, json: dict[str, Any]) -> Any:
+        response = await self._client.patch(path, json=json)
+        _raise_for_status(response)
+        return response.json()
+
+    async def get_text(self, path: str) -> str:
+        response = await self._client.get(path)
+        _raise_for_status(response)
+        return response.text
+
+    async def get_redirect(self, path: str) -> str:
+        response = await self._client.get(path, follow_redirects=False)
+        return _redirect_url(response)
+
     async def delete(self, path: str) -> Any:
         response = await self._client.delete(path)
         _raise_for_status(response)
@@ -124,3 +163,16 @@ class AsyncHTTPClient:
 
     async def close(self) -> None:
         await self._client.aclose()
+
+
+def _redirect_url(response: httpx.Response) -> str:
+    from arga_sdk.exceptions import ArgaError
+
+    if response.status_code not in {301, 302, 303, 307, 308}:
+        _raise_for_status(response)
+        raise ArgaError("Artifact endpoint did not return a signed URL")
+    location = response.headers.get("location", "")
+    url = httpx.URL(location)
+    if url.scheme != "https" or not url.host or url.userinfo:
+        raise ArgaError("Artifact endpoint returned an invalid signed URL")
+    return location
