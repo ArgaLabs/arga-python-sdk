@@ -304,6 +304,27 @@ class BraintrustSync:
                     watermark = datetime.fromisoformat(state["watermark"])
                     if len(key) < 32 or watermark.tzinfo is None:
                         raise ValueError()
+                    pending = state.setdefault("pending", {})
+                    acknowledged = state["acknowledged"]
+                    if not isinstance(pending, dict) or not isinstance(acknowledged, dict):
+                        raise ValueError()
+                    for trace_id, created in pending.items():
+                        if not isinstance(trace_id, str) or not trace_id or not isinstance(created, str):
+                            raise ValueError()
+                        if datetime.fromisoformat(created).tzinfo is None:
+                            raise ValueError()
+                    for episode_id, receipt in acknowledged.items():
+                        if not isinstance(episode_id, str) or not isinstance(receipt, dict):
+                            raise ValueError()
+                        digest, created = receipt["digest"], receipt["created"]
+                        if (
+                            not isinstance(digest, str)
+                            or len(digest) != 64
+                            or len(bytes.fromhex(digest)) != 32
+                        ):
+                            raise ValueError()
+                        if not isinstance(created, str) or datetime.fromisoformat(created).tzinfo is None:
+                            raise ValueError()
                 except SyncError:
                     raise
                 except Exception:
@@ -319,6 +340,7 @@ class BraintrustSync:
                 # Persist aliases before the first request, including on upload failure.
                 _save(self.path, state)
                 key, watermark = bytes.fromhex(state["alias_key"]), self.since
+            pending = state.setdefault("pending", {})
             start = max(self.since, watermark - self.lookback)
             end = min(until.astimezone(UTC), watermark + self.window)
             if end <= start:
@@ -326,7 +348,7 @@ class BraintrustSync:
                     "uploaded": 0,
                     "unchanged": 0,
                     "coverage_gaps": 0,
-                    "pending": len(state.get("pending", {})),
+                    "pending": len(pending),
                     "caught_up": True,
                 }
             roots = _query(
@@ -335,7 +357,6 @@ class BraintrustSync:
                 f"AND created >= {_literal(start.isoformat())} AND created < {_literal(end.isoformat())} ORDER BY created ASC",
                 limit=1000,
             )
-            pending = state.setdefault("pending", {})
             selected = {root.get("root_span_id"): root for root in roots}
             for trace_id, created in pending.items():
                 selected.setdefault(trace_id, {"root_span_id": trace_id, "created": created})

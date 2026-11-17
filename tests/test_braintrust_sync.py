@@ -285,3 +285,34 @@ def test_already_caught_up_sync_has_consistent_counters(tmp_path):
             "pending": 0,
             "caught_up": True,
         }
+
+
+@respx.mock
+@pytest.mark.parametrize(
+    "field,invalid",
+    [
+        ("pending", None),
+        ("pending", []),
+        ("pending", "PRIVATE_CANARY"),
+        ("pending", {"trace": None}),
+        ("acknowledged", []),
+        ("acknowledged", {"episode": {"digest": "bad", "created": CREATED}}),
+    ],
+)
+def test_corrupt_checkpoint_maps_fail_closed_before_caught_up_return(tmp_path, field, invalid):
+    path = tmp_path / "state"
+    with BraintrustSync(
+        source="support",
+        project_id=PROJECT,
+        braintrust_key="key",
+        arga_key="key",
+        state_path=path,
+        since=SINCE,
+    ) as sync:
+        sync.sync_once(until=SINCE)
+        state = json.loads(path.read_text())
+        state[field] = invalid
+        path.write_text(json.dumps(state))
+        with pytest.raises(SyncError, match="Invalid local checkpoint") as caught:
+            sync.sync_once(until=SINCE)
+        assert "PRIVATE_CANARY" not in str(caught.value)
