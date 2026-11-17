@@ -1,12 +1,15 @@
-"""Let Arga explore staging autonomously with a focused objective."""
+"""Record a browser flow against a reachable staging app using current Test Runs.
+
+The historical filename is retained; this does not deploy customer agent code.
+"""
 
 from __future__ import annotations
 
 import os
 
-from arga_sdk import Arga
-
 from _shared import handle_fatal_error, print_json, require_env
+
+from arga_sdk import Arga
 
 agent_run = {
     "url": os.environ.get("STAGING_URL", "https://staging.example.com"),
@@ -14,7 +17,6 @@ agent_run = {
         "Explore onboarding, sign in, and the first purchase flow. Look for "
         "dead ends, broken states, and obvious regressions."
     ),
-    "action_budget": 80,
     "poll_interval_seconds": 2.5,
     "timeout_seconds": 600.0,
 }
@@ -27,43 +29,37 @@ def main() -> None:
         client_kwargs["base_url"] = base_url
 
     with Arga(**client_kwargs) as client:
-        run = client.runs.create_agent_run(
-            url=agent_run["url"],
-            focus=agent_run["focus"],
-            action_budget=agent_run["action_budget"],
+        run = client.test_runs.create(
+            start_url=agent_run["url"],
+            prompt=agent_run["focus"],
         )
-        print_json("Created agent run", run.model_dump(mode="json", exclude_none=True))
+        print_json("Created browser Test Run", run.model_dump(mode="json", exclude_none=True))
 
-        detail = client.runs.wait(
-            run.run_id,
+        detail = client.test_runs.wait(
+            run.id,
             poll_interval=agent_run["poll_interval_seconds"],
             timeout=agent_run["timeout_seconds"],
         )
 
         print_json(
-            "Agent exploration summary",
+            "Browser flow summary",
             {
-                "run_id": run.run_id,
+                "run_id": run.id,
                 "status": detail.status,
-                "run_type": detail.run_type,
-                "environment_url": detail.environment_url,
-                "failure_category": detail.failure_category,
-                "failure_detail": detail.failure_detail,
+                "mode": detail.mode,
+                "start_url": detail.start_url,
+                "error_message": detail.error_message,
             },
         )
 
-        if detail.story_json is not None:
-            print_json("story_json", detail.story_json)
-        if detail.results_json is not None:
-            print_json("results_json", detail.results_json)
-        if detail.attack_plan_json is not None:
-            print_json("attack_plan_json", detail.attack_plan_json)
-        if detail.redteam_report_json is not None:
-            print_json("redteam_report_json", detail.redteam_report_json)
+        if detail.summary_json is not None:
+            print_json("summary_json", detail.summary_json)
+        if detail.test_config_json is not None:
+            print_json("Editable TestConfig", detail.test_config_json)
 
         if detail.status != "completed":
             raise RuntimeError(
-                "The agent run did not complete successfully. Review the "
+                "The browser Test Run did not complete successfully. Review the "
                 "artifacts above before acting on the environment."
             )
 

@@ -9,7 +9,6 @@ from arga_sdk.exceptions import ArgaAPIError
 
 from .conftest import TEST_BASE_URL
 
-
 # --------------------------------------------------------------------------
 # Sync tests
 # --------------------------------------------------------------------------

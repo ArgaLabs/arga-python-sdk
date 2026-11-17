@@ -18,7 +18,6 @@ from arga_sdk import (
 )
 
 from .conftest import (
-    TEST_API_KEY,
     TEST_BASE_URL,
     TWIN_PLAID,
     TWIN_PROVISION_STATUS,
@@ -27,7 +26,6 @@ from .conftest import (
     TWIN_SALESFORCE_PROVISION_STATUS,
     TWIN_STRIPE,
 )
-
 
 # --------------------------------------------------------------------------
 # Sync tests
@@ -45,7 +43,7 @@ class TestListTwins:
         assert "waterfall" in get_args(KnownTwinName)
 
     def test_list(self, client: Arga, mock_router: respx.Router) -> None:
-        mock_router.get("/validate/twins").mock(
+        mock_router.get("/twins").mock(
             return_value=httpx.Response(200, json=[TWIN_STRIPE, TWIN_PLAID])
         )
         twins = client.twins.list()
@@ -66,7 +64,7 @@ class TestListTwins:
         assert plaid.mcp["path"] == "/mcp"
 
     def test_list_includes_salesforce(self, client: Arga, mock_router: respx.Router) -> None:
-        mock_router.get("/validate/twins").mock(return_value=httpx.Response(200, json=[TWIN_SALESFORCE]))
+        mock_router.get("/twins").mock(return_value=httpx.Response(200, json=[TWIN_SALESFORCE]))
         twins = client.twins.list()
 
         assert len(twins) == 1
@@ -75,7 +73,7 @@ class TestListTwins:
         assert twins[0].kind == "backend"
 
     def test_list_empty(self, client: Arga, mock_router: respx.Router) -> None:
-        mock_router.get("/validate/twins").mock(
+        mock_router.get("/twins").mock(
             return_value=httpx.Response(200, json=[])
         )
         twins = client.twins.list()
@@ -315,7 +313,7 @@ class TestExtend:
 @pytest.mark.asyncio
 async def test_async_list_twins(async_client: AsyncArga) -> None:
     with respx.mock(base_url=TEST_BASE_URL) as router:
-        router.get("/validate/twins").mock(
+        router.get("/twins").mock(
             return_value=httpx.Response(200, json=[TWIN_STRIPE, TWIN_PLAID])
         )
         twins = await async_client.twins.list()

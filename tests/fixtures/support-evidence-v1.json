@@ -1,0 +1,171 @@
+{
+  "episode_id": "385315b93d7cd085ea881aff49fed422",
+  "events": [
+    {
+      "complete": true,
+      "parameters": {
+        "user": "actor_8520df5cb724157858b8becf"
+      },
+      "provider": "gmail",
+      "records": [
+        {
+          "email": "person_82d9067c851b95f14ee3f0d1@example.invalid",
+          "id": "actor_8520df5cb724157858b8becf",
+          "resource": "profile"
+        }
+      ],
+      "resource": "profile",
+      "scope": "resource",
+      "sequence": 1,
+      "verb": "get"
+    },
+    {
+      "complete": true,
+      "parameters": {
+        "id": "msg_80f2e1647eacc1e8c55b9a2a",
+        "user": "actor_8520df5cb724157858b8becf"
+      },
+      "provider": "gmail",
+      "records": [
+        {
+          "body": "Please correct duplicate charge ch_3dc96a6cff1a93230f32d39c and preserve ch_33c5d871ec9d706bdedc9638.",
+          "from": "person_6d9ff8846a38db37fb1458d6@example.invalid",
+          "id": "msg_80f2e1647eacc1e8c55b9a2a",
+          "internal_date": 1794924000000,
+          "labels": [
+            "INBOX"
+          ],
+          "resource": "messages",
+          "subject": "Duplicate charge",
+          "thread_id": "thread_699b3d287370ccb52ae6d9d5",
+          "to": [
+            "person_82d9067c851b95f14ee3f0d1@example.invalid"
+          ]
+        }
+      ],
+      "resource": "messages",
+      "scope": "resource",
+      "sequence": 2,
+      "verb": "get"
+    },
+    {
+      "complete": true,
+      "parameters": {
+        "id": "cus_29bbeccf70b2c9d7974729e1"
+      },
+      "provider": "stripe",
+      "records": [
+        {
+          "email": "person_6d9ff8846a38db37fb1458d6@example.invalid",
+          "id": "cus_29bbeccf70b2c9d7974729e1",
+          "resource": "customers"
+        }
+      ],
+      "resource": "customers",
+      "scope": "resource",
+      "sequence": 3,
+      "verb": "retrieve"
+    },
+    {
+      "complete": true,
+      "parameters": {
+        "id": "ch_33c5d871ec9d706bdedc9638"
+      },
+      "provider": "stripe",
+      "records": [
+        {
+          "amount": 4900,
+          "amount_refunded": 0,
+          "captured": true,
+          "currency": "usd",
+          "customer": "cus_29bbeccf70b2c9d7974729e1",
+          "id": "ch_33c5d871ec9d706bdedc9638",
+          "paid": true,
+          "payment_intent": "pi_cc9d65e482a529ea9c9ae93b",
+          "resource": "charges"
+        }
+      ],
+      "resource": "charges",
+      "scope": "resource",
+      "sequence": 4,
+      "verb": "retrieve"
+    },
+    {
+      "complete": true,
+      "parameters": {
+        "id": "ch_3dc96a6cff1a93230f32d39c"
+      },
+      "provider": "stripe",
+      "records": [
+        {
+          "amount": 4900,
+          "amount_refunded": 1200,
+          "captured": true,
+          "currency": "usd",
+          "customer": "cus_29bbeccf70b2c9d7974729e1",
+          "id": "ch_3dc96a6cff1a93230f32d39c",
+          "paid": true,
+          "payment_intent": "pi_895af3ff0bbe7f01a60113fc",
+          "resource": "charges"
+        }
+      ],
+      "resource": "charges",
+      "scope": "resource",
+      "sequence": 5,
+      "verb": "retrieve"
+    },
+    {
+      "complete": true,
+      "parameters": {
+        "charge": "ch_3dc96a6cff1a93230f32d39c"
+      },
+      "provider": "stripe",
+      "records": [
+        {
+          "amount": 1200,
+          "charge": "ch_3dc96a6cff1a93230f32d39c",
+          "currency": "usd",
+          "id": "re_e51dee41bb8f11ca1e9d07fa",
+          "payment_intent": "pi_895af3ff0bbe7f01a60113fc",
+          "resource": "refunds",
+          "status": "succeeded"
+        }
+      ],
+      "resource": "refunds",
+      "scope": "result_page",
+      "sequence": 6,
+      "verb": "list"
+    },
+    {
+      "parameters": {
+        "amount": 3700,
+        "charge": "ch_3dc96a6cff1a93230f32d39c"
+      },
+      "provider": "stripe",
+      "records": [
+        {
+          "amount": 3700,
+          "charge": "ch_3dc96a6cff1a93230f32d39c",
+          "currency": "usd",
+          "id": "re_5238c699afee84528f0c37f4",
+          "payment_intent": "pi_895af3ff0bbe7f01a60113fc",
+          "resource": "refunds",
+          "status": "succeeded"
+        }
+      ],
+      "resource": "refunds",
+      "scope": "mutation",
+      "sequence": 7,
+      "verb": "create"
+    }
+  ],
+  "goal": "Correct duplicate charge ch_3dc96a6cff1a93230f32d39c for person_6d9ff8846a38db37fb1458d6@example.invalid. Preserve ch_33c5d871ec9d706bdedc9638.",
+  "issues": [],
+  "origin": "sdk",
+  "policies": [
+    "Customer confirmations require the accountable owner's review before sending."
+  ],
+  "policy_hash": "a29b2b5a807dc10a8d1b5ebda61dccddb3edafec2c652fd1f1273c4ac592566f",
+  "schema_version": "arga.evidence.v1",
+  "source": "support-agent"
+}

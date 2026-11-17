@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "arga-py-sdk"
-version = "0.1.5"
+version = "0.2.0"
 description = "Python SDK for the Arga API"
 readme = "README.md"
 license = "MIT"
@@ -27,10 +27,13 @@ dependencies = [
     "httpx>=0.25.0",
     "httpx-sse>=0.4.0",
     "pydantic>=2.0.0",
+    "typing-extensions>=4.12.0",
+    "stripe>=14.4.1,<15",
+    "google-api-python-client>=2.193.0,<3",
 ]
 
 [project.optional-dependencies]
-dev = ["pytest", "pytest-asyncio", "respx"]
+dev = ["pytest", "pytest-asyncio", "respx", "ruff", "jsonschema"]
 
 [project.urls]
 Documentation = "https://docs.argalabs.com"
@@ -38,3 +41,13 @@ Repository = "https://github.com/ArgaLabs/arga-python-sdk"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/arga_sdk"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 110
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I"]

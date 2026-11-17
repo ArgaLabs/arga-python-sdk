@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import os
 
-from arga_sdk import Arga
-
 from _shared import handle_fatal_error, print_json, require_env
+
+from arga_sdk import Arga
 
 checkout_scenario = {
     "name": "Checkout Upgrade Flow",

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+import pytest_asyncio
 import respx
 
 from arga_sdk import Arga, AsyncArga
@@ -17,11 +18,14 @@ def client() -> Arga:
     c.close()
 
 
-@pytest.fixture()
-def async_client() -> AsyncArga:
+@pytest_asyncio.fixture()
+async def async_client() -> AsyncArga:
     """Create an async Arga client pointed at a test URL."""
     c = AsyncArga(api_key=TEST_API_KEY, base_url=TEST_BASE_URL)
-    yield c
+    try:
+        yield c
+    finally:
+        await c.close()
 
 
 @pytest.fixture()
