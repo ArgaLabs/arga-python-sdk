@@ -75,7 +75,6 @@ def main():
             while True:
                 try:
                     result = sync.sync_once()
-                    print(json.dumps(result), flush=True)
                 except (SyncError, OSError):
                     # Never echo exception bodies, SQL, span contents or credentials.
                     print(
@@ -86,10 +85,19 @@ def main():
                     if not args.watch:
                         return 1
                     result = {"caught_up": True}
+                else:
+                    try:
+                        print(json.dumps(result), flush=True)
+                    except OSError:
+                        # A failed output pipe is terminal, not a retryable sync failure.
+                        return 1
                 if not args.watch:
                     return 0
                 if result["caught_up"]:
                     time.sleep(args.interval)
+    except (ValueError, KeyError, TypeError):
+        print("Invalid sync state or configuration. Check the local checkpoint and policy.", file=sys.stderr)
+        return 2
     except KeyboardInterrupt:
         return 0
 

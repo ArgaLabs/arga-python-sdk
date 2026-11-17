@@ -266,3 +266,22 @@ def test_malformed_root_does_not_stall_healthy_roots_and_is_retried(tmp_path):
         result = sync.sync_once(until=SINCE + timedelta(minutes=10))
         assert result["uploaded"] == 0 and result["coverage_gaps"] == result["pending"] == 1
     assert route.call_count == 1
+
+
+@respx.mock
+def test_already_caught_up_sync_has_consistent_counters(tmp_path):
+    with BraintrustSync(
+        source="support",
+        project_id=PROJECT,
+        braintrust_key="key",
+        arga_key="key",
+        state_path=tmp_path / "state",
+        since=SINCE,
+    ) as sync:
+        assert sync.sync_once(until=SINCE) == {
+            "uploaded": 0,
+            "unchanged": 0,
+            "coverage_gaps": 0,
+            "pending": 0,
+            "caught_up": True,
+        }

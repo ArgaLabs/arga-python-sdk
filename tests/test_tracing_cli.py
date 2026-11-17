@@ -38,7 +38,8 @@ def configure(monkeypatch, tmp_path, config=None, extra=()):
 def test_invalid_config_returns_two_without_traceback(monkeypatch, tmp_path, capsys, config, extra):
     configure(monkeypatch, tmp_path, config, extra)
     assert cli.main() == 2
-    assert "Invalid sync configuration" in capsys.readouterr().err
+    error = capsys.readouterr().err
+    assert "Invalid sync configuration" in error and "Traceback" not in error
 
 
 def test_watch_retries_checkpoint_io_error_as_runtime_failure(monkeypatch, tmp_path, capsys):
@@ -68,3 +69,54 @@ def test_watch_retries_checkpoint_io_error_as_runtime_failure(monkeypatch, tmp_p
     assert (
         "Sync failed" in error and "Invalid sync configuration" not in error and "PRIVATE_CANARY" not in error
     )
+
+
+@pytest.mark.parametrize(
+    "error", [KeyError("PRIVATE_CANARY"), ValueError("PRIVATE_CANARY"), TypeError("PRIVATE_CANARY")]
+)
+def test_runtime_state_errors_are_sanitized(monkeypatch, tmp_path, capsys, error):
+    configure(monkeypatch, tmp_path)
+
+    class Sync:
+        def __init__(self, **kwargs):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            pass
+
+        def sync_once(self):
+            raise error
+
+    monkeypatch.setattr(cli, "BraintrustSync", Sync)
+    assert cli.main() == 2
+    message = capsys.readouterr().err
+    assert "Invalid sync state" in message and "PRIVATE_CANARY" not in message and "Traceback" not in message
+
+
+def test_broken_stdout_exits_watch_without_retrying_successful_sync(monkeypatch, tmp_path):
+    configure(monkeypatch, tmp_path, extra=("--watch",))
+    calls = []
+
+    class Sync:
+        def __init__(self, **kwargs):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            pass
+
+        def sync_once(self):
+            calls.append(True)
+            return {"caught_up": True}
+
+    def broken_pipe(*args, **kwargs):
+        raise BrokenPipeError()
+
+    monkeypatch.setattr(cli, "BraintrustSync", Sync)
+    monkeypatch.setattr(cli, "print", broken_pipe, raising=False)
+    assert cli.main() == 1 and len(calls) == 1

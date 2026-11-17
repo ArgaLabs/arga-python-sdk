@@ -322,7 +322,13 @@ class BraintrustSync:
             start = max(self.since, watermark - self.lookback)
             end = min(until.astimezone(UTC), watermark + self.window)
             if end <= start:
-                return {"uploaded": 0, "unchanged": 0, "caught_up": True}
+                return {
+                    "uploaded": 0,
+                    "unchanged": 0,
+                    "coverage_gaps": 0,
+                    "pending": len(state.get("pending", {})),
+                    "caught_up": True,
+                }
             roots = _query(
                 self.braintrust,
                 f"SELECT root_span_id, created FROM project_logs({_literal(self.project_id)}) WHERE is_root = true "

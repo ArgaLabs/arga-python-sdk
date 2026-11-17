@@ -11,7 +11,16 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from email.utils import getaddresses
 
-from .models import MAX_EVIDENCE_BYTES, SYSTEM_LABELS, Episode, Error, Event, Parameters, Record
+from .models import (
+    MAX_EVIDENCE_BYTES,
+    RESOURCE_FIELDS,
+    SYSTEM_LABELS,
+    Episode,
+    Error,
+    Event,
+    Parameters,
+    Record,
+)
 
 TEXT_FIELDS = frozenset({"goal", "policy", "gmail.subject", "gmail.body"})
 READS = {"get", "retrieve", "list", "search"}
@@ -147,23 +156,7 @@ class Projector:
 
     def stripe_record(self, resource, raw):
         fields = {"resource": resource, "id": self.alias(PREFIXES[resource], value(raw, "id"))}
-        allowed = {
-            "customers": (),
-            "payment_intents": ("customer", "latest_charge", "amount", "currency", "status", "created"),
-            "charges": (
-                "customer",
-                "payment_intent",
-                "amount",
-                "amount_refunded",
-                "currency",
-                "paid",
-                "captured",
-                "refunded",
-                "status",
-                "created",
-            ),
-            "refunds": ("payment_intent", "charge", "amount", "currency", "status", "created"),
-        }[resource]
+        allowed = RESOURCE_FIELDS[resource] - {"email"}
         refs = {"customer": "cus", "payment_intent": "pi", "charge": "ch", "latest_charge": "ch"}
         for key in allowed:
             item = value(raw, key)
