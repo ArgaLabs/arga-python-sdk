@@ -8,11 +8,15 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
 MAX_EVIDENCE_BYTES = 100_000
-Alias = Annotated[str, StringConstraints(pattern=r"^(cus|pi|ch|re|msg|thread|draft|actor|label)_[a-f0-9]{24}$")]
+Alias = Annotated[
+    str, StringConstraints(pattern=r"^(cus|pi|ch|re|msg|thread|draft|actor|label)_[a-f0-9]{24}$")
+]
 EmailAlias = Annotated[str, StringConstraints(pattern=r"^person_[a-f0-9]{24}@example\.invalid$")]
 Text = Annotated[str, StringConstraints(max_length=4000)]
 Resource = Literal["customers", "payment_intents", "charges", "refunds", "messages", "drafts", "profile"]
-Verb = Literal["retrieve", "get", "list", "search", "create", "update", "send", "modify", "trash", "untrash", "delete"]
+Verb = Literal[
+    "retrieve", "get", "list", "search", "create", "update", "send", "modify", "trash", "untrash", "delete"
+]
 Issue = Literal[
     "unsupported_operation",
     "projection_failed",
@@ -23,6 +27,79 @@ Issue = Literal[
     "text_dropped",
     "agent_error",
 ]
+
+
+SYSTEM_LABELS = frozenset(
+    {
+        "INBOX",
+        "SENT",
+        "DRAFT",
+        "TRASH",
+        "SPAM",
+        "UNREAD",
+        "STARRED",
+        "IMPORTANT",
+        "CHAT",
+        "CATEGORY_PERSONAL",
+        "CATEGORY_SOCIAL",
+        "CATEGORY_PROMOTIONS",
+        "CATEGORY_UPDATES",
+        "CATEGORY_FORUMS",
+    }
+)
+RESOURCE_FIELDS = {
+    "customers": {"email"},
+    "payment_intents": {"customer", "latest_charge", "amount", "currency", "status", "created"},
+    "charges": {
+        "customer",
+        "payment_intent",
+        "amount",
+        "amount_refunded",
+        "currency",
+        "paid",
+        "captured",
+        "refunded",
+        "status",
+        "created",
+    },
+    "refunds": {"payment_intent", "charge", "amount", "currency", "status", "created"},
+    "messages": {"thread_id", "from_email", "to", "subject", "body", "labels", "internal_date"},
+    "drafts": {"message_id", "thread_id", "from_email", "to", "subject", "body", "labels", "internal_date"},
+    "profile": {"email"},
+}
+STRIPE_RESOURCES = frozenset({"customers", "payment_intents", "charges", "refunds"})
+
+
+def _record_schema(schema):
+    # Portable constraints complement runtime checks (contiguous event sequence is dynamic).
+    all_fields = set(schema["properties"]) - {"id", "resource"}
+    schema["allOf"] = []
+    for resource, fields in RESOURCE_FIELDS.items():
+        allowed = {"from" if field == "from_email" else field for field in fields}
+        schema["allOf"].append(
+            {
+                "if": {"properties": {"resource": {"const": resource}}, "required": ["resource"]},
+                "then": {"not": {"anyOf": [{"required": [field]} for field in sorted(all_fields - allowed)]}},
+            }
+        )
+    schema["properties"]["labels"]["anyOf"][0]["items"] = {
+        "anyOf": [{"enum": sorted(SYSTEM_LABELS)}, {"type": "string", "pattern": "^label_[a-f0-9]{24}$"}]
+    }
+
+
+def _event_schema(schema):
+    schema["allOf"] = [
+        {
+            "if": {"properties": {"resource": {"const": resource}}, "required": ["resource"]},
+            "then": {
+                "properties": {
+                    "provider": {"const": "stripe" if resource in STRIPE_RESOURCES else "gmail"},
+                    "records": {"items": {"properties": {"resource": {"const": resource}}}},
+                }
+            },
+        }
+        for resource in RESOURCE_FIELDS
+    ]
 
 
 class EvidenceModel(BaseModel):
@@ -40,6 +117,7 @@ class Parameters(EvidenceModel):
 
 
 class Record(EvidenceModel):
+    model_config = ConfigDict(json_schema_extra=_record_schema)
     resource: Resource
     id: Alias
     customer: Alias | None = None
@@ -80,48 +158,16 @@ class Record(EvidenceModel):
     @model_validator(mode="after")
     def fields_for_resource(self):
         fields = self.model_fields_set - {"id", "resource"}
-        allowed = {
-            "customers": {"email"},
-            "payment_intents": {"customer", "latest_charge", "amount", "currency", "status", "created"},
-            "charges": {
-                "customer",
-                "payment_intent",
-                "amount",
-                "amount_refunded",
-                "currency",
-                "paid",
-                "captured",
-                "refunded",
-                "status",
-                "created",
-            },
-            "refunds": {"payment_intent", "charge", "amount", "currency", "status", "created"},
-            "messages": {"thread_id", "from_email", "to", "subject", "body", "labels", "internal_date"},
-            "drafts": {"message_id", "thread_id", "from_email", "to", "subject", "body", "labels", "internal_date"},
-            "profile": {"email"},
-        }[self.resource]
+        allowed = RESOURCE_FIELDS[self.resource]
         if fields - allowed:
             raise ValueError("Fields do not belong to this resource")
         if self.labels is not None:
             import re
 
-            system = {
-                "INBOX",
-                "SENT",
-                "DRAFT",
-                "TRASH",
-                "SPAM",
-                "UNREAD",
-                "STARRED",
-                "IMPORTANT",
-                "CHAT",
-                "CATEGORY_PERSONAL",
-                "CATEGORY_SOCIAL",
-                "CATEGORY_PROMOTIONS",
-                "CATEGORY_UPDATES",
-                "CATEGORY_FORUMS",
-            }
-            if any(label not in system and not re.fullmatch(r"label_[a-f0-9]{24}", label) for label in self.labels):
+            if any(
+                label not in SYSTEM_LABELS and not re.fullmatch(r"label_[a-f0-9]{24}", label)
+                for label in self.labels
+            ):
                 raise ValueError("Labels must be system labels or local aliases")
         return self
 
@@ -130,12 +176,20 @@ class Error(EvidenceModel):
     category: Literal["provider", "permission", "rate_limit", "network", "unknown"]
     http_status: int | None = Field(default=None, ge=400, le=599)
     code: (
-        Literal["rate_limit", "resource_missing", "permission_denied", "invalid_request", "insufficient_funds", "other"]
+        Literal[
+            "rate_limit",
+            "resource_missing",
+            "permission_denied",
+            "invalid_request",
+            "insufficient_funds",
+            "other",
+        ]
         | None
     ) = None
 
 
 class Event(EvidenceModel):
+    model_config = ConfigDict(json_schema_extra=_event_schema)
     sequence: int = Field(ge=1, le=100)
     provider: Literal["gmail", "stripe"]
     resource: Resource
@@ -148,8 +202,7 @@ class Event(EvidenceModel):
 
     @model_validator(mode="after")
     def resource_matches(self):
-        stripe = {"customers", "payment_intents", "charges", "refunds"}
-        if (self.resource in stripe) != (self.provider == "stripe"):
+        if (self.resource in STRIPE_RESOURCES) != (self.provider == "stripe"):
             raise ValueError("Provider and resource disagree")
         if any(record.resource != self.resource for record in self.records):
             raise ValueError("Record and event resource disagree")

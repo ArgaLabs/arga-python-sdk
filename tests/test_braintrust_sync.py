@@ -104,7 +104,11 @@ def test_sync_retries_acknowledged_windows_and_late_revisions_without_uploading_
     def braintrust(request):
         queries.append(json.loads(request.content)["query"])
         assert request.headers["authorization"] == "Bearer BT_KEY_CANARY"
-        data = [{"root_span_id": "trace-raw-id", "created": CREATED}] if "is_root = true" in queries[-1] else spans
+        data = (
+            [{"root_span_id": "trace-raw-id", "created": CREATED}]
+            if "is_root = true" in queries[-1]
+            else spans
+        )
         return httpx.Response(200, json={"data": data})
 
     def arga(request):
@@ -186,7 +190,10 @@ def test_unfinished_roots_are_revisited_after_their_lookback_window(tmp_path):
         queries.append(query)
         if "is_root = true" in query:
             return httpx.Response(
-                200, json={"data": [{"root_span_id": "trace-raw-id", "created": CREATED}] if first_window[0] else []}
+                200,
+                json={
+                    "data": [{"root_span_id": "trace-raw-id", "created": CREATED}] if first_window[0] else []
+                },
             )
         return httpx.Response(200, json={"data": spans})
 
@@ -210,3 +217,52 @@ def test_unfinished_roots_are_revisited_after_their_lookback_window(tmp_path):
         result = sync.sync_once(until=SINCE + timedelta(minutes=10))
         assert result["pending"] == 0 and result["uploaded"] == 1
         assert "created >=" not in queries[-1]
+
+
+def test_concurrent_reads_are_not_an_ordering_gap():
+    source = rows()
+    source[2] = copy.deepcopy(source[1])
+    source[2]["span_id"] = "read-2"
+    source[2]["metrics"] = {"start": 2.5, "end": 4}
+    assert "source_incomplete" not in project(source).blockers()
+
+
+@respx.mock
+def test_malformed_root_does_not_stall_healthy_roots_and_is_retried(tmp_path):
+    first = [True]
+
+    def braintrust(request):
+        query = json.loads(request.content)["query"]
+        if "is_root = true" in query:
+            data = (
+                [{"root_span_id": root, "created": CREATED} for root in ("bad-root", "trace-raw-id")]
+                if first[0]
+                else []
+            )
+        elif "bad-root" in query:
+            data = [{"span_id": "child", "root_span_id": "bad-root", "span_parents": ["missing"]}]
+        else:
+            data = rows()
+        return httpx.Response(200, json={"data": data})
+
+    respx.post("https://api.braintrust.dev/btql").mock(side_effect=braintrust)
+    route = respx.post("https://api.argalabs.com/datasets/evidence").mock(
+        return_value=httpx.Response(201, json={"id": str(uuid.uuid4())})
+    )
+    path = tmp_path / "state"
+    with BraintrustSync(
+        source="support",
+        project_id=PROJECT,
+        braintrust_key="key",
+        arga_key="key",
+        state_path=path,
+        since=SINCE,
+        policy=POLICY,
+    ) as sync:
+        result = sync.sync_once(until=SINCE + timedelta(minutes=5))
+        assert result["uploaded"] == result["coverage_gaps"] == result["pending"] == 1
+        assert json.loads(path.read_text())["watermark"] == (SINCE + timedelta(minutes=5)).isoformat()
+        first[0] = False
+        result = sync.sync_once(until=SINCE + timedelta(minutes=10))
+        assert result["uploaded"] == 0 and result["coverage_gaps"] == result["pending"] == 1
+    assert route.call_count == 1

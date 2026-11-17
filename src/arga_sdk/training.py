@@ -1,12 +1,13 @@
 """Training control-plane helpers. Agent instrumentation should use upload-only keys."""
 
+import json
 from datetime import datetime
 from typing import Any, Literal
 
 from pydantic import BaseModel, SecretStr
 
 from .resources._common import segment
-from .tracing.models import Episode
+from .tracing.models import MAX_EVIDENCE_BYTES, Episode
 from .types import (
     ScenarioTwinEnvironment,
     TrainingDataset,
@@ -22,6 +23,14 @@ class EvidenceUploadKey(BaseModel):
     scope: str
 
 
+def _evidence_payload(episode):
+    payload = Episode.model_validate(episode.payload()).payload()
+    # Use a conservative encoding bound before handing data to the HTTP layer.
+    if len(json.dumps(payload, allow_nan=False).encode()) > MAX_EVIDENCE_BYTES:
+        raise ValueError("Projected episode exceeds the upload limit")
+    return payload
+
+
 class SyncTraining:
     def __init__(self, http):
         self._http = http
@@ -30,7 +39,7 @@ class SyncTraining:
         return EvidenceUploadKey.model_validate(self._http.post("/datasets/evidence-key", json={"source": source}))
 
     def upload_evidence(self, episode: Episode) -> dict:
-        return self._http.post("/datasets/evidence", json=Episode.model_validate(episode.payload()).payload())
+        return self._http.post("/datasets/evidence", json=_evidence_payload(episode))
 
     def list(self, *, limit: int = 50, offset: int = 0) -> list[TrainingDataset]:
         return [
@@ -114,7 +123,7 @@ class AsyncTraining:
         )
 
     async def upload_evidence(self, episode: Episode) -> dict:
-        return await self._http.post("/datasets/evidence", json=Episode.model_validate(episode.payload()).payload())
+        return await self._http.post("/datasets/evidence", json=_evidence_payload(episode))
 
     async def list(self, *, limit: int = 50, offset: int = 0) -> list[TrainingDataset]:
         return [

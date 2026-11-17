@@ -1,8 +1,8 @@
 # SDK examples
 
 Install the standard package with `pip install arga-py-sdk` or `uv add arga-py-sdk`.
-It includes tracing and the Gmail/Stripe client dependencies. For this unreleased
-v0.2.0 checkout, use `pip install -e '.[dev]'`.
+It includes tracing and the Gmail/Stripe client dependencies. For a development
+checkout, use `pip install -e '.[dev]'`.
 
 Set `ARGA_API_KEY` securely before running a live example. If needed, set
 `ARGA_BASE_URL` to another backend API URL; the default is `https://api.argalabs.com`.
@@ -13,7 +13,7 @@ Open each script and adjust its configuration before running it.
 | [validate_staging_release.py](validate_staging_release.py) | Create and wait for a browser Test Run against an existing staging deployment; fail the release gate on an unsuccessful outcome |
 | [create_checkout_scenario.py](create_checkout_scenario.py) | Save an explicit, reusable checkout Scenario |
 | [provision_checkout_twins.py](provision_checkout_twins.py) | Create a Twin Run, wait for readiness and inspect its endpoints |
-| [ensure_scenario_twin_urls.py](ensure_scenario_twin_urls.py) | Create or reuse a Scenario's persistent twin environment |
+| [ensure_scenario_twin_urls.py](ensure_scenario_twin_urls.py) | Set `ARGA_SCENARIO_ID` to an existing Scenario, then create or reuse its persistent twin environment |
 | [explore_staging_with_agent.py](explore_staging_with_agent.py) | Record a browser flow through the current Test Runs API; its historical filename is retained |
 
 Run a configured script with:

@@ -18,7 +18,7 @@ import httpx
 
 from .adapters import operation_for
 from .models import MAX_EVIDENCE_BYTES
-from .projection import CapturePolicy, Projector, value
+from .projection import READS, CapturePolicy, Projector, value
 
 UTC = timezone.utc
 
@@ -38,14 +38,19 @@ def pointer(document, path):
     return document
 
 
-def project_trace(rows, *, source, project_id, alias_key, policy, goal_pointer="/input", policies=(), operations=None):
+def project_trace(
+    rows, *, source, project_id, alias_key, policy, goal_pointer="/input", policies=(), operations=None
+):
     """Mappings use canonical operation names; no payload inferred from LLM tool suggestions."""
     if not rows or len(rows) > 1000:
         raise SyncError("Select a complete trace with at most 1,000 spans")
     spans = {}
     trace_ids = set()
     for row in rows:
-        span_id, trace_id = row.get("span_id") or row.get("id"), row.get("root_span_id") or row.get("trace_id")
+        span_id, trace_id = (
+            row.get("span_id") or row.get("id"),
+            row.get("root_span_id") or row.get("trace_id"),
+        )
         if not isinstance(span_id, str) or not isinstance(trace_id, str):
             raise SyncError("Invalid Braintrust trace identifiers")
         if span_id in spans and spans[span_id] != row:
@@ -68,7 +73,9 @@ def project_trace(rows, *, source, project_id, alias_key, policy, goal_pointer="
         ready = {span_id for span_id, parents in remaining.items() if not parents}
         if not ready:
             raise SyncError("Braintrust trace has cyclic parents")
-        remaining = {span_id: parents - ready for span_id, parents in remaining.items() if span_id not in ready}
+        remaining = {
+            span_id: parents - ready for span_id, parents in remaining.items() if span_id not in ready
+        }
     projector = Projector(
         source=source,
         episode_key=project_id + ":" + next(iter(trace_ids)),
@@ -110,13 +117,15 @@ def project_trace(rows, *, source, project_id, alias_key, policy, goal_pointer="
             start, end = 0, 0
         mapped.append((start, end, span))
     mapped.sort(key=lambda item: (item[0], str(item[2].get("span_id", ""))))
-    previous_end = float("-inf")
+    active = []
     for start, end, span in mapped:
-        if start < previous_end or end < start:
-            projector.issue("source_incomplete")
-        previous_end = max(previous_end, end)
         name = span["span_attributes"]["name"]
         operation = operation_for((operations or {}).get(name, name))
+        write = operation[2] not in READS
+        active = [(finish, mutation) for finish, mutation in active if finish > start]
+        if end < start or any(write or mutation for _, mutation in active):
+            projector.issue("source_incomplete")
+        active.append((end, write))
         error = span.get("error")
         # Never export arbitrary error strings/messages. Only structured normalized fields.
         if error and not isinstance(error, dict):
@@ -183,7 +192,9 @@ def _checkpoint_lock(path):
     try:
         import fcntl
     except ImportError:
-        raise SyncError("Checkpoint sync requires a POSIX host; project_trace is platform independent") from None
+        raise SyncError(
+            "Checkpoint sync requires a POSIX host; project_trace is platform independent"
+        ) from None
     path.parent.mkdir(parents=True, exist_ok=True)
     descriptor = os.open(str(path) + ".lock", os.O_CREAT | os.O_RDWR, 0o600)
     try:
@@ -239,14 +250,21 @@ class BraintrustSync:
             follow_redirects=False,
         )
         self.arga = httpx.Client(
-            base_url=base_url, headers={"Authorization": "Bearer " + arga_key}, timeout=15, follow_redirects=False
+            base_url=base_url,
+            headers={"Authorization": "Bearer " + arga_key},
+            timeout=15,
+            follow_redirects=False,
         )
         # Cache identity only; the server still authenticates every request.
         owner = hashlib.sha256(arga_key.encode()).hexdigest()
         if arga_key.startswith("arga_trace_"):
             try:
                 segment = arga_key[len("arga_trace_") :].split(".")[1]
-                owner = str(uuid.UUID(json.loads(base64.urlsafe_b64decode(segment + "=" * (-len(segment) % 4)))["sub"]))
+                owner = str(
+                    uuid.UUID(
+                        json.loads(base64.urlsafe_b64decode(segment + "=" * (-len(segment) % 4)))["sub"]
+                    )
+                )
             except Exception:
                 raise ValueError("Invalid scoped Arga key") from None
         config = {
@@ -264,7 +282,9 @@ class BraintrustSync:
         self.identity = hashlib.sha256(json.dumps(config, sort_keys=True).encode()).hexdigest()
 
     def sync_once(self, *, until=None):
-        """Process one complete time window. Advance only after every upload is acknowledged.
+        """Process one time window; retain malformed/unfinished roots locally for retry.
+
+        Advance only after every attempted upload is acknowledged.
 
         Re-read overlap to detect late/revised spans; the local digest cache suppresses
         unchanged uploads. Children are fetched without a time-window filter.
@@ -313,7 +333,7 @@ class BraintrustSync:
             selected = {root.get("root_span_id"): root for root in roots}
             for trace_id, created in pending.items():
                 selected.setdefault(trace_id, {"root_span_id": trace_id, "created": created})
-            uploaded = unchanged = 0
+            uploaded = unchanged = gaps = 0
             for root in selected.values():
                 trace_id, created = root.get("root_span_id"), root.get("created")
                 if not isinstance(trace_id, str) or not isinstance(created, str):
@@ -333,27 +353,39 @@ class BraintrustSync:
                 )
                 root_spans = [row for row in rows if not row.get("span_parents")]
                 root_end = value(root_spans[0].get("metrics"), "end") if len(root_spans) == 1 else None
-                if len(root_spans) == 1 and (type(root_end) not in (float, int) or not math.isfinite(root_end)):
+                if len(root_spans) == 1 and (
+                    type(root_end) not in (float, int) or not math.isfinite(root_end)
+                ):
                     # Keep long-running roots independently of the lookback window.
                     # Do not upload their changing partial payloads or stall newer runs.
                     pending[trace_id] = created
                     if len(pending) > 1000:
                         raise SyncError("Too many unfinished roots; resolve or backfill this source")
                     continue
-                episode = project_trace(
-                    rows,
-                    source=self.source,
-                    project_id=self.project_id,
-                    alias_key=key,
-                    policy=self.policy,
-                    goal_pointer=self.goal_pointer,
-                    policies=self.policies,
-                    operations=self.operations,
-                )
-                payload = episode.payload()
-                encoded = json.dumps(payload, sort_keys=True, allow_nan=False).encode()
-                if len(encoded) > MAX_EVIDENCE_BYTES:
-                    raise SyncError("Projected episode exceeds the upload limit")
+                try:
+                    episode = project_trace(
+                        rows,
+                        source=self.source,
+                        project_id=self.project_id,
+                        alias_key=key,
+                        policy=self.policy,
+                        goal_pointer=self.goal_pointer,
+                        policies=self.policies,
+                        operations=self.operations,
+                    )
+                    payload = episode.payload()
+                    encoded = json.dumps(payload, sort_keys=True, allow_nan=False).encode()
+                    if len(encoded) > MAX_EVIDENCE_BYTES:
+                        raise ValueError("Projected episode exceeds the upload limit")
+                except (SyncError, ValueError, TypeError, KeyError):
+                    # Only root references stay on the customer's host, never raw spans.
+                    pending[trace_id] = created
+                    gaps += 1
+                    if len(pending) > 1000:
+                        raise SyncError(
+                            "Too many unresolved roots; resolve or backfill this source"
+                        ) from None
+                    continue
                 digest = hashlib.sha256(encoded).hexdigest()
                 previous = state["acknowledged"].get(episode.episode_id)
                 if previous and previous["digest"] == digest:
@@ -383,6 +415,7 @@ class BraintrustSync:
                 "uploaded": uploaded,
                 "unchanged": unchanged,
                 "pending": len(pending),
+                "coverage_gaps": gaps,
                 "caught_up": end >= until.astimezone(UTC),
             }
 

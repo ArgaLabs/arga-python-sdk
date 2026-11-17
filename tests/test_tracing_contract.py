@@ -4,6 +4,8 @@ import base64
 import json
 from pathlib import Path
 
+import pytest
+
 from arga_sdk.tracing import CapturePolicy
 from arga_sdk.tracing.models import Episode
 from arga_sdk.tracing.projection import Projector
@@ -60,7 +62,10 @@ def support_episode():
             "metadata": {"private": "METADATA_CANARY"},
         },
     )
-    for payment, charge, refunded in [("pi_original", "ch_original", 0), ("pi_duplicate", "ch_duplicate", 1200)]:
+    for payment, charge, refunded in [
+        ("pi_original", "ch_original", 0),
+        ("pi_duplicate", "ch_duplicate", 1200),
+    ]:
         projector.record(
             "stripe",
             "charges",
@@ -120,3 +125,29 @@ def test_wire_contract_and_shared_fixture():
     assert "CANARY" not in json.dumps(fixture)
     assert Episode.model_validate(fixture).blockers() == []
     assert Episode.model_json_schema() == json.loads((directory / "evidence-v1.schema.json").read_text())
+
+
+def test_episode_identifier_does_not_expose_alias_key_bits():
+    projector = Projector(source="support", episode_key="test", alias_key=b"a" * 32, policy=CapturePolicy())
+    assert projector.episode.episode_id != projector.key.hex()[:32]
+
+
+@pytest.mark.parametrize("change", ["provider", "record_resource", "record_field", "label"])
+def test_json_schema_rejects_cross_resource_payloads(change):
+    import copy
+
+    import jsonschema
+
+    payload = support_episode().payload()
+    jsonschema.validate(payload, Episode.model_json_schema())
+    malformed = copy.deepcopy(payload)
+    if change == "provider":
+        malformed["events"][3]["provider"] = "gmail"
+    elif change == "record_resource":
+        malformed["events"][3]["records"][0]["resource"] = "refunds"
+    elif change == "record_field":
+        malformed["events"][3]["records"][0]["body"] = "PRIVATE_CANARY"
+    else:
+        malformed["events"][1]["records"][0]["labels"] = ["PRIVATE_CANARY"]
+    with pytest.raises(jsonschema.ValidationError):
+        jsonschema.validate(malformed, Episode.model_json_schema())

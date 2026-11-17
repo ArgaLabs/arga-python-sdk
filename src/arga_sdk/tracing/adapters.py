@@ -8,7 +8,12 @@ import inspect
 from collections.abc import Mapping
 
 STRIPE_RESOURCES = {"customers", "payment_intents", "charges", "refunds"}
-STRIPE_LEGACY = {"Customer": "customers", "PaymentIntent": "payment_intents", "Charge": "charges", "Refund": "refunds"}
+STRIPE_LEGACY = {
+    "Customer": "customers",
+    "PaymentIntent": "payment_intents",
+    "Charge": "charges",
+    "Refund": "refunds",
+}
 STRIPE_VERBS = {"retrieve", "list", "search", "create", "update", "delete"}
 GMAIL_VERBS = {"get", "list", "create", "update", "delete", "send", "modify", "trash", "untrash"}
 
@@ -38,6 +43,8 @@ class StripeProxy:
         path = (*self._path, name)
         if name in STRIPE_LEGACY:
             return StripeProxy(target, self._tracing, path)
+        if inspect.isclass(target):
+            return target
         if not callable(target):
             return StripeProxy(target, self._tracing, path) if hasattr(target, "__dict__") else target
         parts = [STRIPE_LEGACY.get(part, part) for part in path if part != "v1"]
@@ -46,7 +53,11 @@ class StripeProxy:
 
         def parameters(args, kwargs):
             # SDK options may contain headers/keys; only params and explicit known fields are selected later.
-            params = dict(kwargs.get("params") or {}) if isinstance(kwargs.get("params"), Mapping) else dict(kwargs)
+            params = (
+                dict(kwargs.get("params") or {})
+                if isinstance(kwargs.get("params"), Mapping)
+                else dict(kwargs)
+            )
             if args and isinstance(args[0], str):
                 params["id"] = args[0]
             elif args and isinstance(args[0], Mapping):
@@ -59,7 +70,9 @@ class StripeProxy:
 
             @functools.wraps(target)
             async def asynchronous(*args, **kwargs):
-                return await self._tracing.call_async(target, operation, parameters(args, kwargs), args, kwargs)
+                return await self._tracing.call_async(
+                    target, operation, parameters(args, kwargs), args, kwargs
+                )
 
             return asynchronous
 
@@ -72,7 +85,12 @@ class StripeProxy:
 
 class GmailRequest:
     def __init__(self, target, tracing, operation, parameters):
-        self._target, self._tracing, self._operation, self._parameters = target, tracing, operation, parameters
+        self._target, self._tracing, self._operation, self._parameters = (
+            target,
+            tracing,
+            operation,
+            parameters,
+        )
 
     def execute(self, *args, **kwargs):
         return self._tracing.call(self._target.execute, self._operation, self._parameters, args, kwargs)
@@ -96,7 +114,9 @@ class GmailProxy:
             path = (*self._path, name)
             if hasattr(result, "execute"):
                 parts = list(path[1:]) if path and path[0] == "users" else list(path)
-                canonical = "gmail.profile.get" if path == ("users", "getProfile") else "gmail." + ".".join(parts)
+                canonical = (
+                    "gmail.profile.get" if path == ("users", "getProfile") else "gmail." + ".".join(parts)
+                )
                 return GmailRequest(result, self._tracing, operation_for(canonical), kwargs)
             if name in {"users", "messages", "drafts", "threads", "attachments", "labels", "settings"}:
                 return GmailProxy(result, self._tracing, path)

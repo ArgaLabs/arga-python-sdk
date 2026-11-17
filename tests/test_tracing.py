@@ -45,10 +45,16 @@ MESSAGE = {
             {"name": "X-Secret", "value": "HEADER_CANARY"},
         ],
         "body": {
-            "data": base64.urlsafe_b64encode(b"Refund ch_actual for private@example.org; Private Person").decode()
+            "data": base64.urlsafe_b64encode(
+                b"Refund ch_actual for private@example.org; Private Person"
+            ).decode()
         },
         "parts": [
-            {"mimeType": "application/pdf", "filename": "ATTACHMENT_NAME_CANARY", "body": {"data": "ATTACHMENT_CANARY"}}
+            {
+                "mimeType": "application/pdf",
+                "filename": "ATTACHMENT_NAME_CANARY",
+                "body": {"data": "ATTACHMENT_CANARY"},
+            }
         ],
     },
 }
@@ -77,7 +83,8 @@ def test_allowlist_aliases_and_provider_results_are_unchanged():
     )
     gmail = tracing.wrap_gmail(Gmail())
     with tracing.episode(
-        goal="Refund ch_actual for Private Person private@example.org", policies=["Confirmations require owner review."]
+        goal="Refund ch_actual for Private Person private@example.org",
+        policies=["Confirmations require owner review."],
     ):
         assert stripe.v1.charges.retrieve("ch_actual", options={"api_key": "KEY_CANARY"}) is raw_charge
         assert gmail.users().messages().get(userId="me", id="provider-message-id").execute() is raw_message
@@ -144,7 +151,9 @@ def test_errors_unknown_operations_and_record_caps_never_export_raw_payloads():
             tracing.call(fail, ("stripe", "charges", "retrieve"), {}, (), {})
         assert raised.value is error
         tracing.call(lambda: {"secret": "UNKNOWN_CANARY"}, None, {"secret": "INPUT_CANARY"}, (), {})
-        tracing.call(lambda: {"data": [CHARGE] * 51, "has_more": False}, ("stripe", "charges", "list"), {}, (), {})
+        tracing.call(
+            lambda: {"data": [CHARGE] * 51, "has_more": False}, ("stripe", "charges", "list"), {}, (), {}
+        )
     payload = tracing.last_episode
     assert "CANARY" not in json.dumps(payload)
     assert payload["events"][0]["error"] == {"category": "permission", "http_status": 403, "code": "other"}
@@ -163,7 +172,9 @@ async def test_async_agents_isolate_context_and_return_original_results():
         await asyncio.sleep(0)
         return {**CHARGE, "id": charge}
 
-    stripe = tracing.wrap_stripe(SimpleNamespace(v1=SimpleNamespace(charges=SimpleNamespace(retrieve_async=retrieve))))
+    stripe = tracing.wrap_stripe(
+        SimpleNamespace(v1=SimpleNamespace(charges=SimpleNamespace(retrieve_async=retrieve)))
+    )
 
     @tracing.agent(goal=lambda charge: "Refund " + charge)
     async def agent(charge):
@@ -190,7 +201,10 @@ def test_exporter_retries_only_projected_payload_and_preserves_agent_on_rejectio
 
     route = respx.post("https://ingest.example.test/datasets/evidence").mock(side_effect=upload)
     tracing = init(
-        source="support", policy=POLICY, api_key="arga_trace_LOCAL_KEY_CANARY", base_url="https://ingest.example.test"
+        source="support",
+        policy=POLICY,
+        api_key="arga_trace_LOCAL_KEY_CANARY",
+        base_url="https://ingest.example.test",
     )
     with tracing:
         with tracing.episode(goal="Refund ch_actual"):
@@ -252,3 +266,81 @@ async def test_real_stripe_client_sync_and_async():
     assert sync_result.id == async_result.id == "ch_actual"
     assert len(tracing.last_episode["events"]) == 2
     assert "DO_NOT_SEND" not in json.dumps(tracing.last_episode)
+
+
+@respx.mock
+def test_permanent_export_rejection_preserves_decorated_agent_result():
+    route = respx.post("https://api.argalabs.com/datasets/evidence").mock(
+        return_value=httpx.Response(422, text="PRIVATE_CANARY")
+    )
+    with init(source="support", policy=POLICY, api_key="test-key") as tracing:
+
+        @tracing.agent(goal=lambda: "Inspect the charge")
+        def agent():
+            return tracing.call(lambda: CHARGE, ("stripe", "charges", "retrieve"), {}, (), {})
+
+        assert agent() is CHARGE
+        assert tracing.flush()
+        assert tracing.diagnostics()["failed"] == 1
+        assert tracing.recent_uploads() == []
+    assert route.call_count == 1
+
+
+def test_stripe_unsupported_classes_and_exception_types_are_preserved():
+    import stripe
+
+    tracing = init(source="support", upload=False)
+    wrapped = tracing.wrap_stripe(stripe)
+    assert wrapped.Invoice is stripe.Invoice
+    assert wrapped.error.StripeError is stripe.error.StripeError
+    with pytest.raises(wrapped.error.StripeError):
+        raise stripe.error.StripeError("test")
+
+
+@pytest.mark.parametrize(
+    "parts,issue", [([b"\xff"], "projection_failed"), ([b"x" * 3000, b"y" * 3000], "payload_limit")]
+)
+def test_invalid_or_oversized_gmail_body_keeps_metadata(parts, issue):
+    message = copy.deepcopy(MESSAGE)
+    message["payload"].pop("body")
+    message["payload"]["parts"] = [
+        {"mimeType": "text/plain", "body": {"data": base64.urlsafe_b64encode(part).decode()}}
+        for part in parts
+    ]
+    tracing = init(source="support", policy=POLICY, upload=False)
+    with tracing.episode(goal="Inspect mail"):
+        assert tracing.call(lambda: message, ("gmail", "messages", "get"), {}, (), {}) is message
+    episode = Episode.model_validate(tracing.last_episode)
+    assert issue in episode.blockers()
+    assert episode.events[0].records[0].thread_id
+    assert episode.events[0].records[0].body is None
+
+
+@respx.mock
+def test_final_validation_rejection_is_counted_without_upload():
+    with init(source="support", api_key="test-key") as tracing:
+        episode = Episode(source="support", episode_id="a" * 32, policy_hash="b" * 64)
+        episode.issues = ["INVALID_PRIVATE_CANARY"]
+        assert not tracing.submit(episode)
+        assert tracing.diagnostics() == {"dropped": 1}
+
+
+@pytest.mark.asyncio
+async def test_concurrent_reads_are_complete_but_overlapping_mutation_is_not():
+    tracing = init(source="support", policy=POLICY, upload=False)
+
+    async def read():
+        await asyncio.sleep(0)
+        return CHARGE
+
+    with tracing.episode(goal="Inspect charges"):
+        await asyncio.gather(
+            *(tracing.call_async(read, ("stripe", "charges", "retrieve"), {}, (), {}) for _ in range(2))
+        )
+    assert "source_incomplete" not in Episode.model_validate(tracing.last_episode).blockers()
+    with tracing.episode(goal="Inspect and change charges"):
+        await asyncio.gather(
+            tracing.call_async(read, ("stripe", "charges", "retrieve"), {}, (), {}),
+            tracing.call_async(read, ("stripe", "charges", "update"), {}, (), {}),
+        )
+    assert "source_incomplete" in Episode.model_validate(tracing.last_episode).blockers()

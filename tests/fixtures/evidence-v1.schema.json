@@ -57,6 +57,204 @@
     },
     "Event": {
       "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "resource": {
+                "const": "customers"
+              }
+            },
+            "required": [
+              "resource"
+            ]
+          },
+          "then": {
+            "properties": {
+              "provider": {
+                "const": "stripe"
+              },
+              "records": {
+                "items": {
+                  "properties": {
+                    "resource": {
+                      "const": "customers"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "resource": {
+                "const": "payment_intents"
+              }
+            },
+            "required": [
+              "resource"
+            ]
+          },
+          "then": {
+            "properties": {
+              "provider": {
+                "const": "stripe"
+              },
+              "records": {
+                "items": {
+                  "properties": {
+                    "resource": {
+                      "const": "payment_intents"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "resource": {
+                "const": "charges"
+              }
+            },
+            "required": [
+              "resource"
+            ]
+          },
+          "then": {
+            "properties": {
+              "provider": {
+                "const": "stripe"
+              },
+              "records": {
+                "items": {
+                  "properties": {
+                    "resource": {
+                      "const": "charges"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "resource": {
+                "const": "refunds"
+              }
+            },
+            "required": [
+              "resource"
+            ]
+          },
+          "then": {
+            "properties": {
+              "provider": {
+                "const": "stripe"
+              },
+              "records": {
+                "items": {
+                  "properties": {
+                    "resource": {
+                      "const": "refunds"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "resource": {
+                "const": "messages"
+              }
+            },
+            "required": [
+              "resource"
+            ]
+          },
+          "then": {
+            "properties": {
+              "provider": {
+                "const": "gmail"
+              },
+              "records": {
+                "items": {
+                  "properties": {
+                    "resource": {
+                      "const": "messages"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "resource": {
+                "const": "drafts"
+              }
+            },
+            "required": [
+              "resource"
+            ]
+          },
+          "then": {
+            "properties": {
+              "provider": {
+                "const": "gmail"
+              },
+              "records": {
+                "items": {
+                  "properties": {
+                    "resource": {
+                      "const": "drafts"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "resource": {
+                "const": "profile"
+              }
+            },
+            "required": [
+              "resource"
+            ]
+          },
+          "then": {
+            "properties": {
+              "provider": {
+                "const": "gmail"
+              },
+              "records": {
+                "items": {
+                  "properties": {
+                    "resource": {
+                      "const": "profile"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ],
       "properties": {
         "complete": {
           "anyOf": [
@@ -257,6 +455,674 @@
     },
     "Record": {
       "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "resource": {
+                "const": "customers"
+              }
+            },
+            "required": [
+              "resource"
+            ]
+          },
+          "then": {
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "amount"
+                  ]
+                },
+                {
+                  "required": [
+                    "amount_refunded"
+                  ]
+                },
+                {
+                  "required": [
+                    "body"
+                  ]
+                },
+                {
+                  "required": [
+                    "captured"
+                  ]
+                },
+                {
+                  "required": [
+                    "charge"
+                  ]
+                },
+                {
+                  "required": [
+                    "created"
+                  ]
+                },
+                {
+                  "required": [
+                    "currency"
+                  ]
+                },
+                {
+                  "required": [
+                    "customer"
+                  ]
+                },
+                {
+                  "required": [
+                    "from"
+                  ]
+                },
+                {
+                  "required": [
+                    "internal_date"
+                  ]
+                },
+                {
+                  "required": [
+                    "labels"
+                  ]
+                },
+                {
+                  "required": [
+                    "latest_charge"
+                  ]
+                },
+                {
+                  "required": [
+                    "message_id"
+                  ]
+                },
+                {
+                  "required": [
+                    "paid"
+                  ]
+                },
+                {
+                  "required": [
+                    "payment_intent"
+                  ]
+                },
+                {
+                  "required": [
+                    "refunded"
+                  ]
+                },
+                {
+                  "required": [
+                    "status"
+                  ]
+                },
+                {
+                  "required": [
+                    "subject"
+                  ]
+                },
+                {
+                  "required": [
+                    "thread_id"
+                  ]
+                },
+                {
+                  "required": [
+                    "to"
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "resource": {
+                "const": "payment_intents"
+              }
+            },
+            "required": [
+              "resource"
+            ]
+          },
+          "then": {
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "amount_refunded"
+                  ]
+                },
+                {
+                  "required": [
+                    "body"
+                  ]
+                },
+                {
+                  "required": [
+                    "captured"
+                  ]
+                },
+                {
+                  "required": [
+                    "charge"
+                  ]
+                },
+                {
+                  "required": [
+                    "email"
+                  ]
+                },
+                {
+                  "required": [
+                    "from"
+                  ]
+                },
+                {
+                  "required": [
+                    "internal_date"
+                  ]
+                },
+                {
+                  "required": [
+                    "labels"
+                  ]
+                },
+                {
+                  "required": [
+                    "message_id"
+                  ]
+                },
+                {
+                  "required": [
+                    "paid"
+                  ]
+                },
+                {
+                  "required": [
+                    "payment_intent"
+                  ]
+                },
+                {
+                  "required": [
+                    "refunded"
+                  ]
+                },
+                {
+                  "required": [
+                    "subject"
+                  ]
+                },
+                {
+                  "required": [
+                    "thread_id"
+                  ]
+                },
+                {
+                  "required": [
+                    "to"
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "resource": {
+                "const": "charges"
+              }
+            },
+            "required": [
+              "resource"
+            ]
+          },
+          "then": {
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "body"
+                  ]
+                },
+                {
+                  "required": [
+                    "charge"
+                  ]
+                },
+                {
+                  "required": [
+                    "email"
+                  ]
+                },
+                {
+                  "required": [
+                    "from"
+                  ]
+                },
+                {
+                  "required": [
+                    "internal_date"
+                  ]
+                },
+                {
+                  "required": [
+                    "labels"
+                  ]
+                },
+                {
+                  "required": [
+                    "latest_charge"
+                  ]
+                },
+                {
+                  "required": [
+                    "message_id"
+                  ]
+                },
+                {
+                  "required": [
+                    "subject"
+                  ]
+                },
+                {
+                  "required": [
+                    "thread_id"
+                  ]
+                },
+                {
+                  "required": [
+                    "to"
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "resource": {
+                "const": "refunds"
+              }
+            },
+            "required": [
+              "resource"
+            ]
+          },
+          "then": {
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "amount_refunded"
+                  ]
+                },
+                {
+                  "required": [
+                    "body"
+                  ]
+                },
+                {
+                  "required": [
+                    "captured"
+                  ]
+                },
+                {
+                  "required": [
+                    "customer"
+                  ]
+                },
+                {
+                  "required": [
+                    "email"
+                  ]
+                },
+                {
+                  "required": [
+                    "from"
+                  ]
+                },
+                {
+                  "required": [
+                    "internal_date"
+                  ]
+                },
+                {
+                  "required": [
+                    "labels"
+                  ]
+                },
+                {
+                  "required": [
+                    "latest_charge"
+                  ]
+                },
+                {
+                  "required": [
+                    "message_id"
+                  ]
+                },
+                {
+                  "required": [
+                    "paid"
+                  ]
+                },
+                {
+                  "required": [
+                    "refunded"
+                  ]
+                },
+                {
+                  "required": [
+                    "subject"
+                  ]
+                },
+                {
+                  "required": [
+                    "thread_id"
+                  ]
+                },
+                {
+                  "required": [
+                    "to"
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "resource": {
+                "const": "messages"
+              }
+            },
+            "required": [
+              "resource"
+            ]
+          },
+          "then": {
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "amount"
+                  ]
+                },
+                {
+                  "required": [
+                    "amount_refunded"
+                  ]
+                },
+                {
+                  "required": [
+                    "captured"
+                  ]
+                },
+                {
+                  "required": [
+                    "charge"
+                  ]
+                },
+                {
+                  "required": [
+                    "created"
+                  ]
+                },
+                {
+                  "required": [
+                    "currency"
+                  ]
+                },
+                {
+                  "required": [
+                    "customer"
+                  ]
+                },
+                {
+                  "required": [
+                    "email"
+                  ]
+                },
+                {
+                  "required": [
+                    "latest_charge"
+                  ]
+                },
+                {
+                  "required": [
+                    "message_id"
+                  ]
+                },
+                {
+                  "required": [
+                    "paid"
+                  ]
+                },
+                {
+                  "required": [
+                    "payment_intent"
+                  ]
+                },
+                {
+                  "required": [
+                    "refunded"
+                  ]
+                },
+                {
+                  "required": [
+                    "status"
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "resource": {
+                "const": "drafts"
+              }
+            },
+            "required": [
+              "resource"
+            ]
+          },
+          "then": {
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "amount"
+                  ]
+                },
+                {
+                  "required": [
+                    "amount_refunded"
+                  ]
+                },
+                {
+                  "required": [
+                    "captured"
+                  ]
+                },
+                {
+                  "required": [
+                    "charge"
+                  ]
+                },
+                {
+                  "required": [
+                    "created"
+                  ]
+                },
+                {
+                  "required": [
+                    "currency"
+                  ]
+                },
+                {
+                  "required": [
+                    "customer"
+                  ]
+                },
+                {
+                  "required": [
+                    "email"
+                  ]
+                },
+                {
+                  "required": [
+                    "latest_charge"
+                  ]
+                },
+                {
+                  "required": [
+                    "paid"
+                  ]
+                },
+                {
+                  "required": [
+                    "payment_intent"
+                  ]
+                },
+                {
+                  "required": [
+                    "refunded"
+                  ]
+                },
+                {
+                  "required": [
+                    "status"
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "resource": {
+                "const": "profile"
+              }
+            },
+            "required": [
+              "resource"
+            ]
+          },
+          "then": {
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "amount"
+                  ]
+                },
+                {
+                  "required": [
+                    "amount_refunded"
+                  ]
+                },
+                {
+                  "required": [
+                    "body"
+                  ]
+                },
+                {
+                  "required": [
+                    "captured"
+                  ]
+                },
+                {
+                  "required": [
+                    "charge"
+                  ]
+                },
+                {
+                  "required": [
+                    "created"
+                  ]
+                },
+                {
+                  "required": [
+                    "currency"
+                  ]
+                },
+                {
+                  "required": [
+                    "customer"
+                  ]
+                },
+                {
+                  "required": [
+                    "from"
+                  ]
+                },
+                {
+                  "required": [
+                    "internal_date"
+                  ]
+                },
+                {
+                  "required": [
+                    "labels"
+                  ]
+                },
+                {
+                  "required": [
+                    "latest_charge"
+                  ]
+                },
+                {
+                  "required": [
+                    "message_id"
+                  ]
+                },
+                {
+                  "required": [
+                    "paid"
+                  ]
+                },
+                {
+                  "required": [
+                    "payment_intent"
+                  ]
+                },
+                {
+                  "required": [
+                    "refunded"
+                  ]
+                },
+                {
+                  "required": [
+                    "status"
+                  ]
+                },
+                {
+                  "required": [
+                    "subject"
+                  ]
+                },
+                {
+                  "required": [
+                    "thread_id"
+                  ]
+                },
+                {
+                  "required": [
+                    "to"
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      ],
       "properties": {
         "amount": {
           "anyOf": [
@@ -413,7 +1279,30 @@
           "anyOf": [
             {
               "items": {
-                "type": "string"
+                "anyOf": [
+                  {
+                    "enum": [
+                      "CATEGORY_FORUMS",
+                      "CATEGORY_PERSONAL",
+                      "CATEGORY_PROMOTIONS",
+                      "CATEGORY_SOCIAL",
+                      "CATEGORY_UPDATES",
+                      "CHAT",
+                      "DRAFT",
+                      "IMPORTANT",
+                      "INBOX",
+                      "SENT",
+                      "SPAM",
+                      "STARRED",
+                      "TRASH",
+                      "UNREAD"
+                    ]
+                  },
+                  {
+                    "pattern": "^label_[a-f0-9]{24}$",
+                    "type": "string"
+                  }
+                ]
               },
               "maxItems": 30,
               "type": "array"

@@ -11,7 +11,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from email.utils import getaddresses
 
-from .models import MAX_EVIDENCE_BYTES, Episode, Error, Event, Parameters, Record
+from .models import MAX_EVIDENCE_BYTES, SYSTEM_LABELS, Episode, Error, Event, Parameters, Record
 
 TEXT_FIELDS = frozenset({"goal", "policy", "gmail.subject", "gmail.body"})
 READS = {"get", "retrieve", "list", "search"}
@@ -68,13 +68,18 @@ def value(obj, key, default=None):
 
 
 class Projector:
-    def __init__(self, *, source: str, episode_key: str, alias_key: bytes, policy: CapturePolicy, origin="sdk"):
+    def __init__(
+        self, *, source: str, episode_key: str, alias_key: bytes, policy: CapturePolicy, origin="sdk"
+    ):
         if len(alias_key) < 32:
             raise ValueError("Alias key must contain at least 32 bytes")
         self.key = hmac.digest(alias_key, episode_key.encode(), "sha256")
         self.policy = policy
         self.episode = Episode(
-            source=source, origin=origin, episode_id=self.key.hex()[:32], policy_hash=policy.fingerprint
+            source=source,
+            origin=origin,
+            episode_id=hmac.digest(self.key, b"episode-id", "sha256").hex()[:32],
+            policy_hash=policy.fingerprint,
         )
 
     def issue(self, reason):
@@ -188,25 +193,11 @@ class Projector:
             fields["internal_date"] = int(date)
         labels = value(raw, "labelIds")
         if isinstance(labels, list):
-            system = {
-                "INBOX",
-                "SENT",
-                "DRAFT",
-                "TRASH",
-                "SPAM",
-                "UNREAD",
-                "STARRED",
-                "IMPORTANT",
-                "CHAT",
-                "CATEGORY_PERSONAL",
-                "CATEGORY_SOCIAL",
-                "CATEGORY_PROMOTIONS",
-                "CATEGORY_UPDATES",
-                "CATEGORY_FORUMS",
-            }
             if len(labels) > 30:
                 self.issue("record_limit")
-            fields["labels"] = [label if label in system else self.alias("label", label) for label in labels[:30]]
+            fields["labels"] = [
+                label if label in SYSTEM_LABELS else self.alias("label", label) for label in labels[:30]
+            ]
         payload = value(raw, "payload", {})
         headers = value(payload, "headers", [])
         # Header names are matched locally; only selected headers are ever used.
@@ -235,13 +226,20 @@ class Projector:
                     if len(data) > 44_000:
                         self.issue("payload_limit")
                         continue
-                    text = self.text(
-                        "gmail.body", base64.urlsafe_b64decode(data + "=" * (-len(data) % 4)).decode("utf-8")
-                    )
+                    try:
+                        decoded = base64.urlsafe_b64decode(data + "=" * (-len(data) % 4)).decode("utf-8")
+                    except (ValueError, UnicodeError):
+                        self.issue("projection_failed")
+                        continue
+                    text = self.text("gmail.body", decoded)
                     if text:
                         texts.append(text)
             if texts:
-                fields["body"] = "\n".join(texts)
+                body = "\n".join(texts)
+                if len(body) > 4000:
+                    self.issue("payload_limit")
+                else:
+                    fields["body"] = body
         return Record.model_validate(fields)
 
     def record(self, provider, resource, verb, args, response=None, error=None):
@@ -273,7 +271,11 @@ class Projector:
                 self.issue("record_limit")
                 complete = False
             records = [
-                (self.stripe_record(resource, item) if provider == "stripe" else self.gmail_record(resource, item))
+                (
+                    self.stripe_record(resource, item)
+                    if provider == "stripe"
+                    else self.gmail_record(resource, item)
+                )
                 for item in items[:50]
             ]
             event = Event(
@@ -298,7 +300,9 @@ class Projector:
 
 
 def normalize_error(error):
-    status = value(error, "http_status") if isinstance(error, Mapping) else getattr(error, "http_status", None)
+    status = (
+        value(error, "http_status") if isinstance(error, Mapping) else getattr(error, "http_status", None)
+    )
     if status is None and not isinstance(error, Mapping):
         status = getattr(getattr(error, "resp", None), "status", None)
     status = status if type(status) is int and 400 <= status <= 599 else None

@@ -50,7 +50,10 @@ def main() -> None:
         )
 
         if status.status != "ready" or status.error is not None:
-            raise RuntimeError(f"Twin provisioning failed: {status.error}")
+            failure = status.error
+            if not failure and status.failure_detail:
+                failure = f"{status.failure_detail.code}: {status.failure_detail.public_message}"
+            raise RuntimeError(f"Twin provisioning failed: {failure or status.status}")
 
         if status.twins:
             for name, twin in status.twins.items():

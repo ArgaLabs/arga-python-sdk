@@ -20,7 +20,7 @@ from typing import Any, TypeVar, cast
 import httpx
 
 from .models import MAX_EVIDENCE_BYTES, Episode
-from .projection import CapturePolicy, Projector
+from .projection import READS, CapturePolicy, Projector
 
 _ACTIVE: ContextVar[object] = ContextVar("arga_evidence_episode", default=None)
 Client = TypeVar("Client")
@@ -45,7 +45,9 @@ class Exporter:
     def submit(self, episode):
         # The queue contains immutable, validated, minimized JSON bytes only.
         try:
-            payload = json.dumps(Episode.model_validate(episode.payload()).payload(), allow_nan=False).encode()
+            payload = json.dumps(
+                Episode.model_validate(episode.payload()).payload(), allow_nan=False
+            ).encode()
             if len(payload) > MAX_EVIDENCE_BYTES:
                 raise ValueError("Evidence limit")
             with self.condition:
@@ -127,6 +129,7 @@ class EpisodeContext:
         self.projector.set_goal(goal, policies)
         self.lock = threading.RLock()
         self.in_flight = 0
+        self.writes_in_flight = 0
         self.finished = False
 
     def __enter__(self):
@@ -167,7 +170,9 @@ class Tracing:
         # Validate configuration before any instrumentation runs.
         Projector(source=source, episode_key="config", alias_key=self.alias_key, policy=self.policy)
         if upload and not (api_key or os.environ.get("ARGA_TRACE_KEY")):
-            raise ValueError("Set ARGA_TRACE_KEY or pass an Arga upload key; use upload=False for local preview")
+            raise ValueError(
+                "Set ARGA_TRACE_KEY or pass an Arga upload key; use upload=False for local preview"
+            )
         parsed = httpx.URL(base_url)
         if parsed.scheme != "https" and not (
             parsed.scheme == "http" and parsed.host in {"localhost", "127.0.0.1", "::1"}
@@ -222,20 +227,23 @@ class Tracing:
             else None
         )
 
-    def _start(self):
+    def _start(self, operation):
         current = self.current()
         if current:
             with current.lock:
-                current.in_flight += 1
-                if current.in_flight > 1:
+                write = operation is None or operation[2] not in READS
+                if current.in_flight and (write or current.writes_in_flight):
                     # A completion-order list cannot establish pre-mutation state for overlapping calls.
                     current.projector.issue("source_incomplete")
+                current.in_flight += 1
+                current.writes_in_flight += int(write)
         return current
 
     def _end(self, current, operation, parameters, result=None, error=None):
         if current:
             with current.lock:
                 current.in_flight -= 1
+                current.writes_in_flight -= int(operation is None or operation[2] not in READS)
                 if current.finished:
                     return
                 if operation is None:
@@ -244,7 +252,7 @@ class Tracing:
                     current.projector.record(*operation, parameters, result, error)
 
     def call(self, function, operation, parameters, args, kwargs):
-        current = self._start()
+        current = self._start(operation)
         try:
             result = function(*args, **kwargs)
         except BaseException as exc:
@@ -254,7 +262,7 @@ class Tracing:
         return result
 
     async def call_async(self, function, operation, parameters, args, kwargs):
-        current = self._start()
+        current = self._start(operation)
         try:
             result = await function(*args, **kwargs)
         except BaseException as exc:
@@ -280,6 +288,9 @@ class Tracing:
             self.last_episode = episode.payload()
             return self.exporter.submit(episode) if self.exporter else True
         except Exception:
+            if self.exporter:
+                with self.exporter.condition:
+                    self.exporter.stats["dropped"] += 1
             return False
 
     def flush(self, timeout: float = 5.0) -> bool:

@@ -240,7 +240,7 @@ network requests. `tracing.recent_uploads()` returns bounded dataset receipts li
 to `/training/{dataset_id}`. `tracing.diagnostics()` returns content-free queued,
 uploaded, dropped and failed counts. `flush()`/`aflush()` report queue drainage, not
 guaranteed upload success; check those counters. Export uses a bounded in-memory queue
-and retries transient failures three times. There is no disk spool; exhausted retries,
+and makes up to three attempts for transient failures. There is no disk spool; exhausted retries,
 queue overflow and abrupt process termination can lose evidence. Shutdown does not
 delay the agent indefinitely. Call `close()` after flushing to release exporter resources.
 
@@ -333,3 +333,10 @@ enumeration is performed in v1; do not infer unobserved permissions from a succe
 ## Documentation
 
 Full API documentation is available at [docs.argalabs.com](https://docs.argalabs.com).
+
+The shared JSON Schema checks resource/provider agreement, resource-specific fields,
+and record types and labels. Runtime validation additionally requires contiguous event
+sequence numbers. Braintrust sync accepts concurrent reads; overlapping reads/writes
+remain a coverage gap because their starting state is ambiguous. Malformed trace trees
+stay in the private checkpoint for retry while healthy roots continue; `coverage_gaps`
+reports their count for the current window. Pending roots are bounded to 1,000.

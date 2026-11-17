@@ -18,7 +18,6 @@ from arga_sdk import (
 )
 
 from .conftest import (
-    TEST_API_KEY,
     TEST_BASE_URL,
     TWIN_PLAID,
     TWIN_PROVISION_STATUS,
@@ -27,7 +26,6 @@ from .conftest import (
     TWIN_SALESFORCE_PROVISION_STATUS,
     TWIN_STRIPE,
 )
-
 
 # --------------------------------------------------------------------------
 # Sync tests

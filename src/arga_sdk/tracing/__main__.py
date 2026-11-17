@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import math
 import os
 import sys
 import time
@@ -17,11 +18,15 @@ def main():
     parser.add_argument("--source", required=True)
     parser.add_argument("--project", required=True)
     parser.add_argument(
-        "--state", required=True, help="Private local checkpoint; includes the alias key, never provider credentials"
+        "--state",
+        required=True,
+        help="Private local checkpoint; includes the alias key, never provider credentials",
     )
     parser.add_argument("--since", required=True, help="Initial ISO timestamp with timezone")
     parser.add_argument(
-        "--policy", required=True, help="Local JSON policy: text_fields, revision, policies, goal_pointer, operations"
+        "--policy",
+        required=True,
+        help="Local JSON policy: text_fields, revision, policies, goal_pointer, operations",
     )
     parser.add_argument("--region", choices=["us", "eu"], default="us")
     parser.add_argument("--arga-url", default="https://api.argalabs.com")
@@ -29,17 +34,23 @@ def main():
     parser.add_argument("--interval", type=float, default=30)
     args = parser.parse_args()
     try:
-        if args.interval < 1:
+        if not math.isfinite(args.interval) or args.interval < 1:
             raise ValueError()
         braintrust_key, arga_key = os.environ["BRAINTRUST_API_KEY"], os.environ["ARGA_TRACE_KEY"]
         with open(args.policy) as stream:
             config = json.load(stream)
-        if set(config) - {"text_fields", "revision", "policies", "goal_pointer", "operations"}:
+        if not isinstance(config, dict) or set(config) - {
+            "text_fields",
+            "revision",
+            "policies",
+            "goal_pointer",
+            "operations",
+        }:
             raise ValueError()
         policy = CapturePolicy(
             text_fields=frozenset(config.get("text_fields", [])), revision=config.get("revision", "1")
         )
-        with BraintrustSync(
+        sync = BraintrustSync(
             source=args.source,
             project_id=args.project,
             state_path=args.state,
@@ -52,12 +63,20 @@ def main():
             goal_pointer=config.get("goal_pointer", "/input"),
             policies=config.get("policies", []),
             operations=config.get("operations", {}),
-        ) as sync:
+        )
+    except (ValueError, KeyError, OSError, TypeError):
+        print(
+            "Invalid sync configuration. Check environment credentials, policy and timezone-aware start.",
+            file=sys.stderr,
+        )
+        return 2
+    try:
+        with sync:
             while True:
                 try:
                     result = sync.sync_once()
                     print(json.dumps(result), flush=True)
-                except SyncError:
+                except (SyncError, OSError):
                     # Never echo exception bodies, SQL, span contents or credentials.
                     print(
                         "Sync failed; checkpoint retained. Check credentials, evidence coverage and local limits.",
@@ -71,12 +90,6 @@ def main():
                     return 0
                 if result["caught_up"]:
                     time.sleep(args.interval)
-    except (ValueError, KeyError, OSError, TypeError):
-        print(
-            "Invalid sync configuration. Check environment credentials, policy and timezone-aware start.",
-            file=sys.stderr,
-        )
-        return 2
     except KeyboardInterrupt:
         return 0
 
