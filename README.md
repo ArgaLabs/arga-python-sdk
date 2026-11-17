@@ -12,8 +12,8 @@ pip install arga-py-sdk
 uv add arga-py-sdk
 ```
 
-These additions are in v0.2.0, which must be released before the commands above
-install them. During development use `pip install -e '.[dev]'` from this checkout.
+The examples below require v0.2.0 or later. During development, use
+`pip install -e '.[dev]'` from this checkout.
 Python 3.10 or later is required. Installing or importing the SDK does not enable
 tracing; collection starts only when explicitly configured in your application.
 
